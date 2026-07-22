@@ -1,0 +1,47 @@
+name: GHCR Probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Probe package name shapes
+        run: |
+          set +e
+          docker pull alpine:3.20 >/dev/null 2>&1
+
+          targets=(
+            "ghcr.io/btjimerson/cloud-cart-support:probe|name-equals-repo"
+            "ghcr.io/btjimerson/cloud-cart-support/probe-nested:probe|nested-under-repo"
+            "ghcr.io/btjimerson/probe-flat:probe|single-segment-not-repo"
+          )
+
+          echo "RESULTS:" > result.txt
+          for entry in "${targets[@]}"; do
+            ref="${entry%%|*}"
+            desc="${entry##*|}"
+            docker tag alpine:3.20 "$ref"
+            out=$(docker push "$ref" 2>&1)
+            if [ $? -eq 0 ]; then
+              echo "PASS  $desc  ($ref)" | tee -a result.txt
+            else
+              reason=$(echo "$out" | grep -iE "denied|permission|unauthorized" | tail -1)
+              echo "FAIL  $desc  ($ref)  -> ${reason:-see log}" | tee -a result.txt
+            fi
+          done
+
+          echo ""
+          echo "===== SUMMARY ====="
+          cat result.txt
