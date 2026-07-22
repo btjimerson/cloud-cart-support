@@ -1,0 +1,502 @@
+[
+  {
+    "id": 100,
+    "name": "Essence Mascara Lash Princess",
+    "description": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+    "price": 9.99,
+    "category": "beauty",
+    "image_url": "https://cdn.dummyjson.com/product-images/beauty/essence-mascara-lash-princess/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 86
+  },
+  {
+    "id": 200,
+    "name": "Eyeshadow Palette with Mirror",
+    "description": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+    "price": 19.99,
+    "category": "beauty",
+    "image_url": "https://cdn.dummyjson.com/product-images/beauty/eyeshadow-palette-with-mirror/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 19
+  },
+  {
+    "id": 300,
+    "name": "Powder Canister",
+    "description": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+    "price": 14.99,
+    "category": "beauty",
+    "image_url": "https://cdn.dummyjson.com/product-images/beauty/powder-canister/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 8
+  },
+  {
+    "id": 400,
+    "name": "Red Lipstick",
+    "description": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+    "price": 12.99,
+    "category": "beauty",
+    "image_url": "https://cdn.dummyjson.com/product-images/beauty/red-lipstick/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 99
+  },
+  {
+    "id": 500,
+    "name": "Red Nail Polish",
+    "description": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+    "price": 8.99,
+    "category": "beauty",
+    "image_url": "https://cdn.dummyjson.com/product-images/beauty/red-nail-polish/thumbnail.webp",
+    "in_stock": false,
+    "stock_quantity": 0
+  },
+  {
+    "id": 600,
+    "name": "Calvin Klein CK One",
+    "description": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+    "price": 49.99,
+    "category": "fragrances",
+    "image_url": "https://cdn.dummyjson.com/product-images/fragrances/calvin-klein-ck-one/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 36
+  },
+  {
+    "id": 700,
+    "name": "Chanel Coco Noir Eau De",
+    "description": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+    "price": 129.99,
+    "category": "fragrances",
+    "image_url": "https://cdn.dummyjson.com/product-images/fragrances/chanel-coco-noir-eau-de/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 33
+  },
+  {
+    "id": 800,
+    "name": "Dior J'adore",
+    "description": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+    "price": 89.99,
+    "category": "fragrances",
+    "image_url": "https://cdn.dummyjson.com/product-images/fragrances/dior-j'adore/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 22
+  },
+  {
+    "id": 900,
+    "name": "Dolce Shine Eau de",
+    "description": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+    "price": 69.99,
+    "category": "fragrances",
+    "image_url": "https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 99
+  },
+  {
+    "id": 1000,
+    "name": "Gucci Bloom Eau de",
+    "description": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+    "price": 79.99,
+    "category": "fragrances",
+    "image_url": "https://cdn.dummyjson.com/product-images/fragrances/gucci-bloom-eau-de/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 18
+  },
+  {
+    "id": 1100,
+    "name": "Annibale Colombo Bed",
+    "description": "The Annibale Colombo Bed is a luxurious and elegant bed frame, crafted with high-quality materials for a comfortable and stylish bedroom.",
+    "price": 1899.99,
+    "category": "furniture",
+    "image_url": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-bed/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 91
+  },
+  {
+    "id": 1200,
+    "name": "Annibale Colombo Sofa",
+    "description": "The Annibale Colombo Sofa is a sophisticated and comfortable seating option, featuring exquisite design and premium upholstery for your living room.",
+    "price": 2499.99,
+    "category": "furniture",
+    "image_url": "https://cdn.dummyjson.com/product-images/furniture/annibale-colombo-sofa/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 99
+  },
+  {
+    "id": 1300,
+    "name": "Bedside Table African Cherry",
+    "description": "The Bedside Table in African Cherry is a stylish and functional addition to your bedroom, providing convenient storage space and a touch of elegance.",
+    "price": 299.99,
+    "category": "furniture",
+    "image_url": "https://cdn.dummyjson.com/product-images/furniture/bedside-table-african-cherry/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 119
+  },
+  {
+    "id": 1400,
+    "name": "Knoll Saarinen Executive Conference Chair",
+    "description": "The Knoll Saarinen Executive Conference Chair is a modern and ergonomic chair, perfect for your office or conference room with its timeless design.",
+    "price": 499.99,
+    "category": "furniture",
+    "image_url": "https://cdn.dummyjson.com/product-images/furniture/knoll-saarinen-executive-conference-chair/thumbnail.webp",
+    "in_stock": false,
+    "stock_quantity": 0
+  },
+  {
+    "id": 1500,
+    "name": "Wooden Bathroom Sink With Mirror",
+    "description": "The Wooden Bathroom Sink with Mirror is a unique and stylish addition to your bathroom, featuring a wooden sink countertop and a matching mirror.",
+    "price": 799.99,
+    "category": "furniture",
+    "image_url": "https://cdn.dummyjson.com/product-images/furniture/wooden-bathroom-sink-with-mirror/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 16
+  },
+  {
+    "id": 1600,
+    "name": "Apple",
+    "description": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+    "price": 1.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/apple/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 80
+  },
+  {
+    "id": 1700,
+    "name": "Beef Steak",
+    "description": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+    "price": 12.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/beef-steak/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 59
+  },
+  {
+    "id": 1800,
+    "name": "Cat Food",
+    "description": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+    "price": 8.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/cat-food/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 9
+  },
+  {
+    "id": 1900,
+    "name": "Chicken Meat",
+    "description": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+    "price": 9.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/chicken-meat/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 8
+  },
+  {
+    "id": 2000,
+    "name": "Cooking Oil",
+    "description": "Versatile cooking oil suitable for frying, saut\u00e9ing, and various culinary applications.",
+    "price": 4.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/cooking-oil/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 16
+  },
+  {
+    "id": 2100,
+    "name": "Cucumber",
+    "description": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+    "price": 1.49,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/cucumber/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 32
+  },
+  {
+    "id": 2200,
+    "name": "Dog Food",
+    "description": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+    "price": 10.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/dog-food/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 34
+  },
+  {
+    "id": 2300,
+    "name": "Eggs",
+    "description": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+    "price": 2.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/eggs/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 69
+  },
+  {
+    "id": 2400,
+    "name": "Fish Steak",
+    "description": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+    "price": 14.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/fish-steak/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 82
+  },
+  {
+    "id": 2500,
+    "name": "Green Bell Pepper",
+    "description": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+    "price": 1.29,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/green-bell-pepper/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 8
+  },
+  {
+    "id": 2600,
+    "name": "Green Chili Pepper",
+    "description": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+    "price": 0.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/green-chili-pepper/thumbnail.webp",
+    "in_stock": false,
+    "stock_quantity": 0
+  },
+  {
+    "id": 2700,
+    "name": "Honey Jar",
+    "description": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+    "price": 6.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/honey-jar/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 30
+  },
+  {
+    "id": 2800,
+    "name": "Ice Cream",
+    "description": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+    "price": 5.49,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/ice-cream/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 96
+  },
+  {
+    "id": 2900,
+    "name": "Juice",
+    "description": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+    "price": 3.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/juice/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 88
+  },
+  {
+    "id": 3000,
+    "name": "Kiwi",
+    "description": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+    "price": 2.49,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/kiwi/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 94
+  },
+  {
+    "id": 3100,
+    "name": "Lemon",
+    "description": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+    "price": 0.79,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/lemon/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 74
+  },
+  {
+    "id": 3200,
+    "name": "Milk",
+    "description": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+    "price": 3.49,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/milk/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 58
+  },
+  {
+    "id": 3300,
+    "name": "Mulberry",
+    "description": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+    "price": 4.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/mulberry/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 33
+  },
+  {
+    "id": 3400,
+    "name": "Nescafe Coffee",
+    "description": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+    "price": 7.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/nescafe-coffee/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 62
+  },
+  {
+    "id": 3500,
+    "name": "Potatoes",
+    "description": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+    "price": 2.29,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/potatoes/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 80
+  },
+  {
+    "id": 3600,
+    "name": "Protein Powder",
+    "description": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+    "price": 19.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/protein-powder/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 40
+  },
+  {
+    "id": 3700,
+    "name": "Red Onions",
+    "description": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+    "price": 1.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/red-onions/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 108
+  },
+  {
+    "id": 3800,
+    "name": "Rice",
+    "description": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+    "price": 5.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/rice/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 116
+  },
+  {
+    "id": 3900,
+    "name": "Soft Drinks",
+    "description": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+    "price": 1.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/soft-drinks/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 5
+  },
+  {
+    "id": 4000,
+    "name": "Strawberry",
+    "description": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+    "price": 3.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/strawberry/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 102
+  },
+  {
+    "id": 4100,
+    "name": "Tissue Paper Box",
+    "description": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+    "price": 2.49,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/tissue-paper-box/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 108
+  },
+  {
+    "id": 4200,
+    "name": "Water",
+    "description": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+    "price": 0.99,
+    "category": "groceries",
+    "image_url": "https://cdn.dummyjson.com/product-images/groceries/water/thumbnail.webp",
+    "in_stock": false,
+    "stock_quantity": 0
+  },
+  {
+    "id": 4300,
+    "name": "Decoration Swing",
+    "description": "The Decoration Swing is a charming addition to your home decor. Crafted with intricate details, it adds a touch of elegance and whimsy to any room.",
+    "price": 59.99,
+    "category": "home decoration",
+    "image_url": "https://cdn.dummyjson.com/product-images/home-decoration/decoration-swing/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 94
+  },
+  {
+    "id": 4400,
+    "name": "Family Tree Photo Frame",
+    "description": "The Family Tree Photo Frame is a sentimental and stylish way to display your cherished family memories. With multiple photo slots, it tells the story of your loved ones.",
+    "price": 29.99,
+    "category": "home decoration",
+    "image_url": "https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 59
+  },
+  {
+    "id": 4500,
+    "name": "House Showpiece Plant",
+    "description": "The House Showpiece Plant is an artificial plant that brings a touch of nature to your home without the need for maintenance. It adds greenery and style to any space.",
+    "price": 39.99,
+    "category": "home decoration",
+    "image_url": "https://cdn.dummyjson.com/product-images/home-decoration/house-showpiece-plant/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 48
+  },
+  {
+    "id": 4600,
+    "name": "Plant Pot",
+    "description": "The Plant Pot is a stylish container for your favorite plants. With a sleek design, it complements your indoor or outdoor garden, adding a modern touch to your plant display.",
+    "price": 14.99,
+    "category": "home decoration",
+    "image_url": "https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 40
+  },
+  {
+    "id": 4700,
+    "name": "Table Lamp",
+    "description": "The Table Lamp is a functional and decorative lighting solution for your living space. With a modern design, it provides both ambient and task lighting, enhancing the atmosphere.",
+    "price": 49.99,
+    "category": "home decoration",
+    "image_url": "https://cdn.dummyjson.com/product-images/home-decoration/table-lamp/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 24
+  },
+  {
+    "id": 4800,
+    "name": "Bamboo Spatula",
+    "description": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes.",
+    "price": 7.99,
+    "category": "kitchen accessories",
+    "image_url": "https://cdn.dummyjson.com/product-images/kitchen-accessories/bamboo-spatula/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 32
+  },
+  {
+    "id": 4900,
+    "name": "Black Aluminium Cup",
+    "description": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection.",
+    "price": 5.99,
+    "category": "kitchen accessories",
+    "image_url": "https://cdn.dummyjson.com/product-images/kitchen-accessories/black-aluminium-cup/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 102
+  },
+  {
+    "id": 5000,
+    "name": "Black Whisk",
+    "description": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool.",
+    "price": 9.99,
+    "category": "kitchen accessories",
+    "image_url": "https://cdn.dummyjson.com/product-images/kitchen-accessories/black-whisk/thumbnail.webp",
+    "in_stock": true,
+    "stock_quantity": 48
+  }
+]

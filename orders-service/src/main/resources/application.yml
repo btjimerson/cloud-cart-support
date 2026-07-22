@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: orders-service
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+  ai:
+    mcp:
+      server:
+        protocol: SSE
+        capabilities:
+          tool: true
+        name: orders-service
+        version: 0.1.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
