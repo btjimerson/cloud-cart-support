@@ -17,31 +17,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Probe package name shapes
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Make trivial Dockerfile
+        run: printf 'FROM alpine:3.20\n' > probe.Dockerfile
+
+      - name: A) build-push-action DEFAULT (provenance on)
+        id: a
+        continue-on-error: true
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: probe.Dockerfile
+          push: true
+          tags: ghcr.io/btjimerson/cloud-cart-support/probe-buildx-default:probe
+
+      - name: B) build-push-action provenance=false sbom=false
+        id: b
+        continue-on-error: true
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: probe.Dockerfile
+          push: true
+          provenance: false
+          sbom: false
+          tags: ghcr.io/btjimerson/cloud-cart-support/probe-buildx-noprov:probe
+
+      - name: Summary
         run: |
-          set +e
-          docker pull alpine:3.20 >/dev/null 2>&1
-
-          targets=(
-            "ghcr.io/btjimerson/cloud-cart-support:probe|name-equals-repo"
-            "ghcr.io/btjimerson/cloud-cart-support/probe-nested:probe|nested-under-repo"
-            "ghcr.io/btjimerson/probe-flat:probe|single-segment-not-repo"
-          )
-
-          echo "RESULTS:" > result.txt
-          for entry in "${targets[@]}"; do
-            ref="${entry%%|*}"
-            desc="${entry##*|}"
-            docker tag alpine:3.20 "$ref"
-            out=$(docker push "$ref" 2>&1)
-            if [ $? -eq 0 ]; then
-              echo "PASS  $desc  ($ref)" | tee -a result.txt
-            else
-              reason=$(echo "$out" | grep -iE "denied|permission|unauthorized" | tail -1)
-              echo "FAIL  $desc  ($ref)  -> ${reason:-see log}" | tee -a result.txt
-            fi
-          done
-
-          echo ""
-          echo "===== SUMMARY ====="
-          cat result.txt
+          echo "===== BUILDX PROBE SUMMARY ====="
+          echo "A) default (provenance on):    ${{ steps.a.outcome }}"
+          echo "B) provenance=false sbom=false: ${{ steps.b.outcome }}"
