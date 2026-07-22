@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  probe:
+  bootstrap:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,51 +17,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Make trivial Dockerfile
-        run: printf 'FROM alpine:3.20\n' > probe.Dockerfile
-
-      - name: A) build-push-action DEFAULT (provenance on)
-        id: a
-        continue-on-error: true
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: probe.Dockerfile
-          push: true
-          tags: ghcr.io/btjimerson/cloud-cart-support/probe-buildx-default:probe
-
-      - name: B) build-push-action provenance=false sbom=false
-        id: b
-        continue-on-error: true
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: probe.Dockerfile
-          push: true
-          provenance: false
-          sbom: false
-          tags: ghcr.io/btjimerson/cloud-cart-support/probe-buildx-noprov:probe
-
-      - name: C) EXACT repro - real name + :latest + source label
-        id: c
-        continue-on-error: true
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: probe.Dockerfile
-          push: true
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-          tags: |
-            ghcr.io/btjimerson/cloud-cart-support/cloud-cart-support-support:probe
-            ghcr.io/btjimerson/cloud-cart-support/cloud-cart-support-support:probe-latest
-
-      - name: Summary
+      - name: Create real package names from a branch context
         run: |
-          echo "===== BUILDX PROBE SUMMARY ====="
-          echo "A) default (provenance on):     ${{ steps.a.outcome }}"
-          echo "B) provenance=false sbom=false: ${{ steps.b.outcome }}"
-          echo "C) exact repro (real name):     ${{ steps.c.outcome }}"
+          set -e
+          docker pull alpine:3.20 >/dev/null
+
+          names=(
+            "cloud-cart-support/cloud-cart-support-catalog"
+            "cloud-cart-support/cloud-cart-support-customers"
+            "cloud-cart-support/cloud-cart-support-notifications"
+            "cloud-cart-support/cloud-cart-support-orders"
+            "cloud-cart-support/cloud-cart-support-support"
+            "cloud-cart-support/support-service"
+          )
+          for n in "${names[@]}"; do
+            ref="ghcr.io/btjimerson/$n:bootstrap"
+            docker tag alpine:3.20 "$ref"
+            echo "creating $ref"
+            docker push "$ref"
+          done
+          echo "All packages created."
