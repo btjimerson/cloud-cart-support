@@ -45,8 +45,23 @@ jobs:
           sbom: false
           tags: ghcr.io/btjimerson/cloud-cart-support/probe-buildx-noprov:probe
 
+      - name: C) EXACT repro - real name + :latest + source label
+        id: c
+        continue-on-error: true
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: probe.Dockerfile
+          push: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          tags: |
+            ghcr.io/btjimerson/cloud-cart-support/cloud-cart-support-support:probe
+            ghcr.io/btjimerson/cloud-cart-support/cloud-cart-support-support:probe-latest
+
       - name: Summary
         run: |
           echo "===== BUILDX PROBE SUMMARY ====="
-          echo "A) default (provenance on):    ${{ steps.a.outcome }}"
+          echo "A) default (provenance on):     ${{ steps.a.outcome }}"
           echo "B) provenance=false sbom=false: ${{ steps.b.outcome }}"
+          echo "C) exact repro (real name):     ${{ steps.c.outcome }}"
