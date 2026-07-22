@@ -40,5 +40,7 @@ jobs:
           context: .
           file: support-service/Dockerfile
           push: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/support-service:${{ steps.step.outputs.tag }}
