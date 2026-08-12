@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  thymeleaf:
+    cache: false
+
+# Where agents live. This service does not know what agents exist, what models they use,
+# or what tools they may call -- it asks the catalog and the gateway decides the rest.
+agentregistry:
+  base-url: ${AGENTREGISTRY_URL:http://localhost:12121}
+  default-runtime: ${AGENTREGISTRY_RUNTIME:kagent}
+  concierge-agent: ${CONCIERGE_AGENT:support-concierge}
+  auth-token: ${AGENTREGISTRY_TOKEN:}
+  timeout-seconds: ${AGENTREGISTRY_TIMEOUT_SECONDS:60}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
