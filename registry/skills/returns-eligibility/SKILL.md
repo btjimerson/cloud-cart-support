@@ -1,3 +1,8 @@
+---
+name: returns-eligibility
+description: Determine whether a return is allowed, including tier-based exceptions and the return window.
+---
+
 # Return Policy
 
 ## Overview

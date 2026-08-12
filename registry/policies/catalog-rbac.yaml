@@ -1,0 +1,73 @@
+# Registry RBAC: who may publish, approve and deploy catalog artifacts.
+#
+# This is a different layer from dev-runtime-access.yaml. That file governs traffic between
+# running things; this one governs who may change the catalog itself. Both are called
+# "access policy" and they are easy to conflate -- the distinction is:
+#
+#   AccessPolicy         -> principals + actions on catalog resources   (this file)
+#   RuntimeAccessPolicy  -> from/to between deployments and MCP servers (the other file)
+#
+# Principals are `Role` (an OIDC group, matched via RBAC_ROLE_CLAIM=Groups against Keycloak)
+# or `Deployment`. The two demo personas are Keycloak users in different groups.
+apiVersion: ar.dev/v1alpha1
+kind: AccessPolicy
+metadata:
+  name: support-engineers
+spec:
+  description: >-
+    Support engineers compose and publish agents, but cannot approve their own work
+    or change policy.
+  principals:
+    - kind: Role
+      name: support-engineers
+  rules:
+    - actions:
+        - read
+        - create
+        - update
+      resources:
+        - kind: Agent
+          name: "*"
+        - kind: Prompt
+          name: "*"
+        - kind: MCPServer
+          name: "*"
+    - actions:
+        - read
+      resources:
+        - kind: Skill
+          name: "*"
+        - kind: RuntimeAccessPolicy
+          name: "*"
+---
+apiVersion: ar.dev/v1alpha1
+kind: AccessPolicy
+metadata:
+  name: platform-approvers
+spec:
+  description: >-
+    Approvers own policy and the approval gate. This is the authority the engineer has to
+    ask for at 11:00 -- the grant is not theirs to give themselves.
+  principals:
+    - kind: Role
+      name: platform-approvers
+  rules:
+    - actions:
+        - read
+        - create
+        - update
+        - delete
+        - approve
+      resources:
+        - kind: Agent
+          name: "*"
+        - kind: Prompt
+          name: "*"
+        - kind: Skill
+          name: "*"
+        - kind: MCPServer
+          name: "*"
+        - kind: RuntimeAccessPolicy
+          name: "*"
+        - kind: Deployment
+          name: "*"

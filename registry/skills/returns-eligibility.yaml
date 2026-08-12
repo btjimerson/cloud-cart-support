@@ -1,0 +1,15 @@
+apiVersion: ar.dev/v1alpha1
+kind: Skill
+metadata:
+  name: returns-eligibility
+  tag: v1
+  labels:
+    owner: policy
+spec:
+  title: Returns Eligibility
+  description: When a return is allowed, including tier-based exceptions and the return window.
+  source:
+    repository:
+      url: https://github.com/btjimerson/cloud-cart-support-agentic
+      branch: main
+      subfolder: registry/skills/returns-eligibility

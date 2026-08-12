@@ -1,0 +1,28 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: order-agent
+  tag: v1
+  labels:
+    owner: support
+spec:
+  title: Order Agent
+  description: Handles order status, tracking, cancellation and shipping.
+  modelProvider: openai
+  modelName: gpt-4.1
+  # Required whenever an agent composes instructions, skills or plugins: the registry
+  # delivers that content to a harness rather than to a plain declarative runtime.
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: order-agent
+    tag: v1
+  skills:
+    - kind: Skill
+      name: shipping-exceptions
+      tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-orders
+      tag: v1

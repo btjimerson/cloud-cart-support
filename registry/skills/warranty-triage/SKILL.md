@@ -1,3 +1,8 @@
+---
+name: warranty-triage
+description: Assess warranty claims, coverage periods, and what qualifies as a defect.
+---
+
 # Warranty Policy
 
 ## Coverage

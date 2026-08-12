@@ -1,0 +1,31 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: complaint-agent
+  tag: v1
+  labels:
+    owner: support
+spec:
+  title: Complaint Agent
+  description: Handles complaints, escalations and service failures.
+  modelProvider: openai
+  modelName: gpt-4.1
+  # Required whenever an agent composes instructions, skills or plugins: the registry
+  # delivers that content to a harness rather than to a plain declarative runtime.
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: complaint-agent
+    tag: v1
+  skills:
+    - kind: Skill
+      name: warranty-triage
+      tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-customers
+      tag: v1
+    - kind: MCPServer
+      name: cloudcart-notifications
+      tag: v1

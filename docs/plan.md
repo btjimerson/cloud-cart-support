@@ -136,7 +136,46 @@ The catalog UI surfaces four types (Agents, MCP Servers, Skills, Prompts); the A
 
 Calendar versioning now. The existing recipe is stale against this cluster. The new repo pins to installed versions from day one. New kagent CRDs worth a look: `agentharnesses`, `sandboxagents`, `mcpservers` (alongside `remotemcpservers`), `accesspolicies.policy.kagent-enterprise.solo.io`.
 
-### 3.10 Free determinism
+### 3.10 Manifest ground truth (verified by dry-run, 2026-08-12)
+
+Established by submitting deliberately invalid documents to `/v0/apply?dryRun=true` and
+reading the validation errors. None of this is in the OpenAPI document.
+
+| Fact | Value |
+|---|---|
+| `apiVersion` | **`ar.dev/v1alpha1`** |
+| Runtime types | **`Kagent`**, **`BedrockAgentCore`** (also Foundry, Virtual, CopilotStudio) |
+| `RuntimeAccessPolicy` `from[].kind` | **`Deployment`** or **`Role`** — *not* `Agent` |
+| `RuntimeAccessPolicy` `to[].kind` | **`Deployment`** or **`MCPServer`** |
+| `ToRef.inboundAccess` | empty or **`GatewayOnly`** |
+| `AccessPolicy.principals[].kind` | **`Deployment`** or **`Role`** |
+| Default namespace | `default` |
+
+Three consequences that change how this gets built:
+
+**Policy is written against deployments, not catalog artifacts.** `from` takes a `Deployment`
+or a `Role`, never an `Agent`. Policy governs running things, and `Role` is the seam where a
+rule can be scoped to the end user's identity rather than the agent's — the same seam
+`onBehalfOf` uses.
+
+**References do not resolve within a batch.** An Agent that references a Prompt in the *same*
+`/v0/apply` request still fails with `referenced resource not found`; the registry resolves
+against stored state only. Publishing therefore runs in dependency waves — mcp-servers,
+skills, prompts, then agents, then policies — and teardown runs in reverse. `publish.sh`
+does this. A corollary worth remembering: a full dry-run against an empty catalog will always
+report missing references for agents, because a dry run persists nothing.
+
+**Composition requires a harness.** An Agent that sets `instructions`, `skills`, or `plugins`
+must also declare `compatibleHarnesses`, because the registry delivers that content *to a
+harness* rather than to a plain declarative runtime. The value is **not validated** — any
+string is accepted — so the correct one is not knowable from the API. kagent's
+`agentharnesses.kagent.dev` CRD offers backends `openclaw` and `hermes`; the manifests
+currently use **`openclaw`**, and this is the single most likely thing to be wrong. Confirm at
+first real deploy. Note also that kagent's own `Agent` CRD has `spec.type` of `Declarative`
+or `BYO`, and a Declarative kagent agent takes a plain `systemMessage` — so skills and prompts
+as *reusable artifacts* only pay off on the harness path. That is the path this demo needs.
+
+### 3.11 Free determinism
 
 `agentgateway-demo` namespace already runs **`mock-llm`** and `mock-llm-broken`. A deterministic LLM and a deliberately broken one — direct mitigation for the stage-variance risk, and `mock-llm-broken` is a ready-made failure-handling beat.
 
@@ -309,7 +348,16 @@ Phases 1–3 don't touch the registry and can start now. 4–6 depend on the Pha
 1. ~~Keycloak credentials~~ — supplied. Direct access grants are disabled on `solo-ui-frontend` and `ar-backend` is confidential, so API enumeration needs either the `ar-backend` client secret or a browser session. UI walkthrough is the path.
 2. ~~Repo name~~ — **resolved:** `cloud-cart-support-agentic`.
 3. ~~Approver RBAC~~ — **resolved:** Keycloak groups via `RBAC_ROLE_CLAIM` (§3.7). `bob` is a natural fit for the low-privilege engineer persona; `admin-user` for the approver.
-4. ~~Model pinning~~ — **resolved:** OpenAI as the provider, with **several models registered** as `Model` artifacts (`/v0/models`). `AgentSpec` carries `modelName`/`modelProvider` and `DeploymentSpec` carries a `modelRef`, so model choice becomes a governed, swappable catalog entry — worth its own small beat: change an agent's model without touching the agent.
+4. **Model pinning — partly resolved, one constraint found.** OpenAI is the provider, set on
+   each agent via `modelProvider: openai` / `modelName` (free-form strings). But
+   **`ModelSpec.provider` only accepts `bedrock`** — the `Model` *artifact* kind cannot
+   represent an OpenAI model. So "several models registered as catalog artifacts" is only
+   available for Bedrock. Two options, needs a decision:
+   **(a)** Register Bedrock `Model` artifacts for the AgentCore leg and leave the kagent side
+   on `modelProvider`/`modelName` — the model-governance beat then belongs to the AgentCore
+   half of the story, which is arguably where a hyperscaler audience expects it.
+   **(b)** Drop the Model-artifact beat and treat model choice as an agent field throughout.
+   Currently built as (b), with no `registry/models/` content.
 5. ~~Multi-runtime~~ — **resolved:** kagent + AgentCore, both first-class (§4.1).
 6. ~~Namespace~~ — **resolved:** new namespace **`agentic-demo`**. `agentgateway-demo` is the user's and stays untouched.
 7. ~~Existing AgentCore runtime?~~ — **resolved:** `aws-bedrock` is connected in us-east-1 and **Synced** (§3.8). Phase 5b starts from a working connection.

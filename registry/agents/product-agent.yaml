@@ -1,0 +1,24 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: product-agent
+  tag: v1
+  labels:
+    owner: support
+spec:
+  title: Product Agent
+  description: Handles product search, recommendations and availability. Read-only.
+  modelProvider: openai
+  modelName: gpt-4.1
+  # Required whenever an agent composes instructions, skills or plugins: the registry
+  # delivers that content to a harness rather than to a plain declarative runtime.
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: product-agent
+    tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-catalog
+      tag: v1

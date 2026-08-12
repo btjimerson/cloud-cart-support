@@ -1,0 +1,31 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: returns-agent
+  tag: v1
+  labels:
+    owner: support
+spec:
+  title: Returns Agent
+  description: Handles return requests, refunds and exchanges.
+  modelProvider: openai
+  modelName: gpt-4.1
+  # Required whenever an agent composes instructions, skills or plugins: the registry
+  # delivers that content to a harness rather than to a plain declarative runtime.
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: returns-agent
+    tag: v1
+  skills:
+    - kind: Skill
+      name: returns-eligibility
+      tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-orders
+      tag: v1
+    - kind: MCPServer
+      name: cloudcart-customers
+      tag: v1

@@ -1,0 +1,14 @@
+apiVersion: ar.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: cloudcart-orders
+  tag: v1
+  labels:
+    owner: fulfillment
+    domain: orders
+spec:
+  title: Cloud Cart Orders
+  description: Order status, tracking, cancellation and return initiation. Contains state-changing tools.
+  remote:
+    type: sse
+    url: http://orders-service.agentic-demo.svc:8080/sse

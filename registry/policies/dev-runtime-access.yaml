@@ -1,0 +1,106 @@
+# Runtime traffic policy: which deployment may reach which tool, and which agent may
+# delegate to which other agent.
+#
+# Two things to know before editing:
+#
+#   1. `from` and `to` reference **Deployments**, not catalog Agents. Policy governs running
+#      things, so it is written against the deployed instance. `from` also accepts `Role`,
+#      which is how a rule can be scoped to the identity of the end user rather than the agent.
+#
+#   2. Listing an MCPServer on an agent does NOT grant its tools. The agent manifest declares
+#      what the agent *knows about*; this file declares what it is *allowed to call*. Anything
+#      not named in `mcpTools` is denied at the gateway. That gap is deliberate and it is the
+#      demo's centre of gravity -- see the 10:30 beat in docs/plan.md.
+#
+# This is the **dev** set. `issueCredit` is deliberately absent from returns-agent: it is the
+# tool the engineer discovers they cannot call, and granting it is the 11:00 beat.
+apiVersion: ar.dev/v1alpha1
+kind: RuntimeAccessPolicy
+metadata:
+  name: cloudcart-dev
+spec:
+  rules:
+    # --- Concierge may delegate to the four specialists, and nothing else ------------
+    - from:
+        - kind: Deployment
+          name: support-concierge
+      to:
+        - kind: Deployment
+          name: returns-agent
+        - kind: Deployment
+          name: order-agent
+        - kind: Deployment
+          name: complaint-agent
+        - kind: Deployment
+          name: product-agent
+
+    # --- Returns: order lookup and return initiation. No credit, no cancellation. ----
+    - from:
+        - kind: Deployment
+          name: returns-agent
+      to:
+        - kind: MCPServer
+          name: cloudcart-orders
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - getOrderStatus
+            - listCustomerOrders
+            - checkReturnEligibility
+            - initiateReturn
+            - generateReturnLabel
+        - kind: MCPServer
+          name: cloudcart-customers
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - getCustomerInfo
+            - getLoyaltyPoints
+            # issueCredit is intentionally NOT granted. Adding it here is the 11:00 beat.
+
+    # --- Orders: read and cancel ----------------------------------------------------
+    - from:
+        - kind: Deployment
+          name: order-agent
+      to:
+        - kind: MCPServer
+          name: cloudcart-orders
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - getOrderStatus
+            - getTrackingInfo
+            - listCustomerOrders
+            - cancelOrder
+
+    # --- Complaints: customer context, tickets and escalation -----------------------
+    - from:
+        - kind: Deployment
+          name: complaint-agent
+      to:
+        - kind: MCPServer
+          name: cloudcart-customers
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - getCustomerInfo
+            - getLoyaltyPoints
+            - addInteractionNote
+        - kind: MCPServer
+          name: cloudcart-notifications
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - createSupportTicket
+            - escalateToSupervisor
+            - sendEmail
+            # sendSms is not granted in dev: no reason to send real texts from a dev cluster.
+
+    # --- Product: read-only catalog -------------------------------------------------
+    - from:
+        - kind: Deployment
+          name: product-agent
+      to:
+        - kind: MCPServer
+          name: cloudcart-catalog
+          inboundAccess: GatewayOnly
+          mcpTools:
+            - searchProducts
+            - getProductDetails
+            - checkAvailability
+            - getRecommendations

@@ -1,3 +1,8 @@
+---
+name: shipping-exceptions
+description: Handle delayed, lost, and misdelivered shipments, including carrier exception codes.
+---
+
 # Shipping Policy
 
 ## Shipping Methods

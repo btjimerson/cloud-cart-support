@@ -1,0 +1,14 @@
+apiVersion: ar.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: cloudcart-catalog
+  tag: v1
+  labels:
+    owner: merchandising
+    domain: catalog
+spec:
+  title: Cloud Cart Catalog
+  description: Product search, details, availability and recommendations. Read-only.
+  remote:
+    type: sse
+    url: http://catalog-service.agentic-demo.svc:8080/sse
