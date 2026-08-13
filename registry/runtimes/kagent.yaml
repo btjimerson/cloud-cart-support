@@ -1,0 +1,41 @@
+# The kagent runtime connection.
+#
+# AgentCore (`aws-bedrock`) was already connected when this demo started; kagent was not,
+# and nothing can be deployed to the cluster until it is.
+#
+# Config keys are `kagentUrl` and `namespace` -- confirmed from the registry UI's own runtime
+# fixtures, not guessed. Runtime `type` is one of BedrockAgentCore, Kagent, MicrosoftFoundry,
+# MicrosoftCopilotStudio.
+#
+# The oidc block is REQUIRED here: kagent-controller serves /health anonymously but rejects
+# /api/agents with "Failed to get user ID: no session found", so the registry needs a
+# credential to drive it. That credential is a Keycloak client, and its secret must exist as
+# an agentregistry Secret named below BEFORE this is applied.
+#
+# Prerequisites, in order:
+#   1. In Keycloak realm `solo`, create a confidential client (suggested id:
+#      `agentregistry-kagent`) with service accounts enabled.
+#   2. Store its secret in agentregistry as a Secret named `kagent-oidc`, key `clientSecret`.
+#   3. Apply this file.
+#
+# Verify with: kubectl get agents -n kagent   (after a Deployment targets this runtime)
+apiVersion: ar.dev/v1alpha1
+kind: Runtime
+metadata:
+  name: kagent
+spec:
+  type: Kagent
+  config:
+    # In-cluster service URL: the registry runs in the same cluster as the controller.
+    kagentUrl: http://kagent-controller.kagent:8083
+    namespace: kagent
+    oidc:
+      issuer: https://keycloak.pintobean.xyz/realms/solo
+      clientId: agentregistry-kagent
+      clientSecretRef:
+        name: kagent-oidc
+        key: clientSecret
+  # Exported to workloads on this runtime as OTEL_EXPORTER_OTLP_ENDPOINT. This is what puts
+  # kagent and AgentCore traces in the same view -- the cross-runtime story at 15:30 depends
+  # on both runtimes reporting here.
+  telemetryEndpoint: http://agentregistry-enterprise-telemetry-collector.agentregistry-system.svc.cluster.local:4318

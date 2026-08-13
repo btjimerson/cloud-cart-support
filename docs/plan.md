@@ -334,7 +334,30 @@ a Keycloak service account for `support-ui` (client-credentials grant), refreshe
 a pasted token. Worth noting that this is *on message* rather than an annoyance: even the
 frontend has to authenticate to reach an agent.
 
-**Phase 4 — Registry integration.** **Register the kagent runtime** (§3.8) — currently missing, and everything downstream needs it. Publish the artifacts. Wire the Claude Code ↔ registry MCP loop. Wire deployments. Turn on `REQUIRE_CREATE_APPROVAL` via `helm upgrade` — it is not a UI toggle. Confirm the `bob` / `admin-user` split maps cleanly onto the engineer / approver personas.
+**Phase 4 — Registry integration. Authored; blocked on two credentials.**
+
+Done and validated locally:
+- `registry/runtimes/kagent.yaml` — config keys `kagentUrl` and `namespace`, confirmed from
+  the registry UI's own runtime fixtures rather than guessed. Runtime `type` values are
+  `BedrockAgentCore`, `Kagent`, `MicrosoftFoundry`, `MicrosoftCopilotStudio`.
+- `publish.sh` gained a `runtimes` wave, ordered first — nothing deploys without it.
+- `validate.py` knows `Runtime` and `Secret`, and enforces the runtime-type enum.
+
+**Blocker 1 — a Keycloak client for the registry→kagent call.** kagent-controller serves
+`/health` anonymously but rejects `/api/agents` with *"Failed to get user ID: no session
+found"*, so the runtime connection needs the `oidc` block, which needs a confidential
+Keycloak client in realm `solo` plus its secret stored as an agentregistry `Secret`.
+
+**Blocker 2 — a token for `publish.sh`.** Every artifact endpoint is 401. The UI's token is
+browser-held and short-lived (4h), so the durable answer is the same as Phase 3b: a
+service-account client whose credentials `publish.sh` and `support-ui` both use.
+
+Both resolve with one piece of work: **create service-account clients in Keycloak.** That is
+the next action and it needs someone who can log into Keycloak.
+
+Still to do once unblocked: publish the catalog, wire the Claude Code ↔ registry MCP loop,
+create Deployments, turn on `REQUIRE_CREATE_APPROVAL` via `helm upgrade` (not a UI toggle),
+and confirm `bob` / `admin-user` map onto the engineer / approver personas.
 
 **Phase 5 — Policy set.** The 10:30 denial and 11:00 grant, tuned until both are reliable on repeat. Plus the A2A denial. Record a fallback capture of both.
 

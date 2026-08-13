@@ -22,7 +22,7 @@ import urllib.request
 
 import yaml
 
-WAVES = ["mcp-servers", "skills", "prompts", "agents", "policies"]
+WAVES = ["runtimes", "mcp-servers", "skills", "prompts", "agents", "policies"]
 
 # Enum constraints the OpenAPI document does not express, recovered from the live API by
 # submitting deliberately invalid values to /v0/apply?dryRun=true.
@@ -32,6 +32,7 @@ EXTRA_ENUMS = {
     ("ToRef", "inboundAccess"): ["", "GatewayOnly"],
     ("Principal", "kind"): ["Deployment", "Role"],
     ("ResourceRef", "kind"): ["Agent", "MCPServer", "Skill", "Prompt", "Plugin", "Model"],
+    ("RuntimeSpec", "type"): ["BedrockAgentCore", "Kagent", "MicrosoftFoundry", "MicrosoftCopilotStudio"],
 }
 
 KIND_TO_SPEC = {
@@ -42,6 +43,8 @@ KIND_TO_SPEC = {
     "Model": "ModelSpec",
     "AccessPolicy": "AccessPolicySpec",
     "RuntimeAccessPolicy": "RuntimeAccessPolicySpec",
+    "Runtime": "RuntimeSpec",
+    "Secret": "SecretSpec",
 }
 
 API_VERSION = "ar.dev/v1alpha1"

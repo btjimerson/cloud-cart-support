@@ -30,6 +30,7 @@ esac
 
 # Leaves first, then composites, then policy.
 WAVES=(
+  "runtimes"
   "mcp-servers"
   "skills"
   "prompts"
