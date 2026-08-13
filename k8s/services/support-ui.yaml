@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: support-ui
-          image: ghcr.io/btjimerson/cloud-cart-support/support-ui:latest
+          image: ghcr.io/btjimerson/cloud-cart-support/support-ui:8cda287
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

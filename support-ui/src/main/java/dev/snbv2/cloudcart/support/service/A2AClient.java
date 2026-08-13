@@ -249,8 +249,36 @@ public class A2AClient {
                 return A2AReply.error("The %s agent could not complete that request.".formatted(deploymentName));
             }
 
+            JsonNode result = root.path("result").isMissingNode() ? root : root.path("result");
+
+            // A Task carries the reply in `artifacts` and the whole exchange in `history`.
+            // Walking the result wholesale therefore returns the answer *and* the user's own
+            // message back again, so the reply must be taken from the specific fields that
+            // hold it rather than from whatever text the tree happens to contain.
             List<String> texts = new ArrayList<>();
-            collectTextParts(root.path("result").isMissingNode() ? root : root.path("result"), texts);
+            JsonNode artifacts = result.path("artifacts");
+            if (artifacts.isArray() && !artifacts.isEmpty()) {
+                artifacts.forEach(artifact -> collectTextParts(artifact.path("parts"), texts));
+            }
+            if (texts.isEmpty()) {
+                // A Message result puts its parts at the top level.
+                collectTextParts(result.path("parts"), texts);
+            }
+            if (texts.isEmpty()) {
+                // Last resort: the final assistant turn in the history.
+                JsonNode history = result.path("history");
+                if (history.isArray()) {
+                    for (int i = history.size() - 1; i >= 0; i--) {
+                        JsonNode turn = history.get(i);
+                        if (!"user".equals(turn.path("role").asText())) {
+                            collectTextParts(turn.path("parts"), texts);
+                            if (!texts.isEmpty()) {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             if (texts.isEmpty()) {
                 log.warn("A2A response from %s contained no text parts: %s".formatted(deploymentName, rawBody));
