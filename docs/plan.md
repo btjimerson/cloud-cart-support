@@ -311,7 +311,28 @@ Palette: Solo purple `#290C47` allowed/with, gray `#9DA1BD` denied/without, ink 
 
 **Phase 2 — Artifact authoring.** Write `registry/` manifests: 4 MCPServers, 3 Skills, 5 Prompts, 5 Agents. Validate every one with `POST /v0/apply?dryRun=true` before anything is published for real.
 
-**Phase 3 — Baseline runtime.** kagent + agentgateway + services, concierge answering end to end, chat UI working. **Stabilize before the registry enters** — isolates registry problems from runtime problems, and is the fallback demo if the registry leg fails on the day.
+**Phase 3 — Baseline runtime. Workloads done; agents outstanding.** **Stabilize before the
+registry enters** — isolates registry problems from runtime problems, and is the fallback
+demo if the registry leg fails on the day.
+
+*Verified 2026-08-13:* all five workloads deployed to `agentic-demo` and healthy. All **19
+MCP tools live and advertised** over a full MCP handshake against each of the four servers.
+Every tool granted in `registry/policies/` exists on its server, and exactly two are
+deliberately ungranted: `issueCredit` (the 11:00 beat) and `sendSms`. `support-ui` serves at
+its LoadBalancer, and `POST /chat` degrades cleanly to a system-attributed message.
+
+Transport detail worth keeping: the servers announce their message endpoint on the SSE
+stream as `data:/mcp/message?sessionId=...` — **no space after `data:`**, which will silently
+defeat a naive parser.
+
+Still outstanding: no agent is deployed, so nothing answers yet. That needs Phase 4.
+
+**Phase 3b — `support-ui` needs a machine identity.** The A2A client reaches the registry and
+gets a clean **HTTP 401**: the network path is fine, but the pod has no credential. The
+`agentregistry-token` secret is referenced as `optional: true` and does not exist. This needs
+a Keycloak service account for `support-ui` (client-credentials grant), refreshed rather than
+a pasted token. Worth noting that this is *on message* rather than an annoyance: even the
+frontend has to authenticate to reach an agent.
 
 **Phase 4 — Registry integration.** **Register the kagent runtime** (§3.8) — currently missing, and everything downstream needs it. Publish the artifacts. Wire the Claude Code ↔ registry MCP loop. Wire deployments. Turn on `REQUIRE_CREATE_APPROVAL` via `helm upgrade` — it is not a UI toggle. Confirm the `bob` / `admin-user` split maps cleanly onto the engineer / approver personas.
 
