@@ -36,19 +36,68 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${REPO_ROOT}/.env.local"
 
 api() { # method path [body]
-  local method="$1" path="$2" body="${3:-}"
+  local method="$1" path="$2" body="${3:-}" response http out
   if [ -n "$body" ]; then
-    curl -sS -X "$method" "${KEYCLOAK_URL}/admin/realms/${REALM}${path}" \
-      -H "Authorization: Bearer ${ADMIN_TOKEN}" -H 'Content-Type: application/json' -d "$body"
+    response="$(curl -sS -X "$method" "${KEYCLOAK_URL}/admin/realms/${REALM}${path}" \
+      -H "Authorization: Bearer ${ADMIN_TOKEN}" -H 'Content-Type: application/json' \
+      -d "$body" -w $'\n%{http_code}')"
   else
-    curl -sS -X "$method" "${KEYCLOAK_URL}/admin/realms/${REALM}${path}" \
-      -H "Authorization: Bearer ${ADMIN_TOKEN}"
+    response="$(curl -sS -X "$method" "${KEYCLOAK_URL}/admin/realms/${REALM}${path}" \
+      -H "Authorization: Bearer ${ADMIN_TOKEN}" -w $'\n%{http_code}')"
   fi
+  http="$(printf '%s' "$response" | tail -n1)"
+  out="$(printf '%s' "$response" | sed '$d')"
+
+  if [ "$http" -ge 400 ]; then
+    echo "" >&2
+    echo "ERROR: ${method} /admin/realms/${REALM}${path} -> HTTP ${http}" >&2
+    [ -n "$out" ] && echo "  ${out}" >&2
+    if [ "$http" = "403" ]; then
+      cat >&2 <<EOF
+
+  The token authenticated but is not allowed to administer realm '${REALM}'.
+  Keycloak's Admin API needs realm-management roles, which a plain realm user does
+  not have by default. Either:
+
+    a) grant '${KEYCLOAK_ADMIN_USER}' the 'realm-admin' role:
+         realm ${REALM} -> Users -> ${KEYCLOAK_ADMIN_USER} -> Role mapping
+         -> Assign role -> Filter by clients -> realm-management realm-admin
+
+    b) or re-run using the master-realm admin account:
+         KEYCLOAK_ADMIN_REALM=master KEYCLOAK_ADMIN_USER=admin \\
+         KEYCLOAK_ADMIN_PASSWORD=... ./registry/keycloak-setup.sh
+EOF
+    fi
+    exit 1
+  fi
+  printf '%s' "$out"
+}
+
+# Reads an id out of an Admin API response that is expected to be a list. Keycloak returns a
+# JSON *object* for errors, so indexing blindly turns a 403 into an unhelpful KeyError.
+first_id() {
+  python3 -c '
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    print(""); sys.exit()
+try:
+    d = json.loads(raw)
+except json.JSONDecodeError:
+    print("", file=sys.stdout); sys.exit()
+if isinstance(d, list):
+    print(d[0]["id"] if d else "")
+elif isinstance(d, dict):
+    print(d.get("id", ""))
+else:
+    print("")
+'
 }
 
 echo "==> Authenticating to Keycloak..."
-# Admin may live in the master realm or in the target realm; try master first.
-for tokrealm in master "${REALM}"; do
+# Admin may live in the master realm or in the target realm; try master first unless told.
+ADMIN_REALMS="${KEYCLOAK_ADMIN_REALM:-master ${REALM}}"
+for tokrealm in ${ADMIN_REALMS}; do
   ADMIN_TOKEN="$(curl -sS -X POST \
     "${KEYCLOAK_URL}/realms/${tokrealm}/protocol/openid-connect/token" \
     -d grant_type=password -d client_id=admin-cli \
@@ -57,11 +106,17 @@ for tokrealm in master "${REALM}"; do
     | python3 -c 'import json,sys; print(json.load(sys.stdin).get("access_token",""))' 2>/dev/null || true)"
   [ -n "${ADMIN_TOKEN}" ] && { echo "    authenticated via realm '${tokrealm}'"; break; }
 done
-[ -n "${ADMIN_TOKEN:-}" ] || { echo "ERROR: could not obtain an admin token." >&2; exit 1; }
+[ -n "${ADMIN_TOKEN:-}" ] || { echo "ERROR: could not obtain an admin token. Check the username and password." >&2; exit 1; }
+
+# Confirm the token can actually administer the realm before creating anything, so a
+# permissions problem surfaces here rather than half way through.
+echo "==> Checking Admin API access to realm '${REALM}'..."
+api GET "" >/dev/null
+echo "    ok"
 
 # --- groups -----------------------------------------------------------------------------
 for g in support-engineers platform-approvers admins; do
-  existing="$(api GET "/groups?search=${g}&exact=true" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")')"
+  existing="$(api GET "/groups?search=${g}&exact=true" | first_id)"
   if [ -n "$existing" ]; then
     echo "==> Group ${g}: exists"
   else
@@ -70,9 +125,7 @@ for g in support-engineers platform-approvers admins; do
   fi
 done
 
-group_id() {
-  api GET "/groups?search=$1&exact=true" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")'
-}
+group_id() { api GET "/groups?search=$1&exact=true" | first_id; }
 
 # --- clients ----------------------------------------------------------------------------
 umask 077
@@ -86,7 +139,7 @@ make_client() { # clientId group envprefix
   local cid="$1" grp="$2" prefix="$3"
 
   local uuid
-  uuid="$(api GET "/clients?clientId=${cid}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")')"
+  uuid="$(api GET "/clients?clientId=${cid}" | first_id)"
 
   if [ -z "$uuid" ]; then
     api POST "/clients" "$(cat <<JSON
@@ -102,7 +155,7 @@ make_client() { # clientId group envprefix
 }
 JSON
 )" >/dev/null
-    uuid="$(api GET "/clients?clientId=${cid}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")')"
+    uuid="$(api GET "/clients?clientId=${cid}" | first_id)"
     echo "==> Client ${cid}: created"
   else
     echo "==> Client ${cid}: exists"
@@ -133,7 +186,7 @@ JSON
 
   # Put the client's service-account user in the right group.
   local sa_uid gid
-  sa_uid="$(api GET "/clients/${uuid}/service-account-user" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')"
+  sa_uid="$(api GET "/clients/${uuid}/service-account-user" | first_id)"
   gid="$(group_id "${grp}")"
   if [ -n "$sa_uid" ] && [ -n "$gid" ]; then
     api PUT "/users/${sa_uid}/groups/${gid}" "{}" >/dev/null
