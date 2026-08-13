@@ -12,6 +12,7 @@ set -euo pipefail
 #   ./publish.sh                 # apply
 #   ./publish.sh --dry-run       # validate, mutate nothing
 #   ./publish.sh --delete        # remove everything this script publishes
+#   ./publish.sh --skip runtimes # publish the catalog before the runtime credential exists
 #
 # Requires AGENTREGISTRY_URL and AGENTREGISTRY_TOKEN.
 
@@ -21,12 +22,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 MODE="apply"
 QUERY=""
-case "${1:-}" in
-  --dry-run) QUERY="?dryRun=true" ;;
-  --delete)  MODE="delete" ;;
-  "")        ;;
-  *)         echo "unknown option: $1" >&2; exit 2 ;;
-esac
+SKIP=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) QUERY="?dryRun=true" ;;
+    --delete)  MODE="delete" ;;
+    # Publish the catalog before a wave's prerequisites exist -- notably `runtimes`, which
+    # needs a Keycloak client for the registry-to-kagent call. Repeatable.
+    --skip)    SKIP="${SKIP} ${2:?--skip needs a wave name}"; shift ;;
+    *)         echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
 
 # Leaves first, then composites, then policy.
 WAVES=(
@@ -84,13 +91,16 @@ for r in json.load(sys.stdin).get('results', []):
 if [ "$MODE" = "delete" ]; then
   echo "==> Removing artifacts from agentregistry (reverse dependency order)..."
   for (( i=${#WAVES[@]}-1 ; i>=0 ; i-- )); do
-    echo "  wave: ${WAVES[$i]}"
-    send DELETE "${WAVES[$i]}" || true   # keep going: partial state should still drain
+    w="${WAVES[$i]}"
+    case " ${SKIP} " in *" ${w} "*) echo "  wave: ${w} (skipped)"; continue ;; esac
+    echo "  wave: ${w}"
+    send DELETE "${w}" || true   # keep going: partial state should still drain
   done
   echo "==> Registry teardown complete."
 else
   [ -n "$QUERY" ] && echo "==> Validating (dry run) ..." || echo "==> Publishing to agentregistry..."
   for w in "${WAVES[@]}"; do
+    case " ${SKIP} " in *" ${w} "*) echo "  wave: ${w} (skipped)"; continue ;; esac
     echo "  wave: ${w}"
     send POST "$w"
   done
