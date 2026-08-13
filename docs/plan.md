@@ -368,10 +368,43 @@ deployment"*, but supplying one forces type `BYO`, and BYO is precisely the mode
 does not manage model or instructions. There is no declarative path through this adapter in
 v2026.7.1.
 
-**Open question for the product team:** is `source.image` meant to be a *custom* agent image
-that pulls its own prompt and skills from the registry at runtime — in which case "compose,
-don't build" means building an image after all — or is the kagent adapter's translation
-incomplete in this release? The answer decides whether the 09:30 beat survives as written.
+**Root cause, traced to the bottom.** kagent's `Agent` CRD is `v1alpha2`, where `modelConfig`,
+`systemMessage`, and `tools` live under **`spec.declarative`**. `spec.byo` carries only
+`deployment`. A BYO agent therefore *structurally cannot* hold a model or an instruction —
+kagent generates its `config.json` as `{"model": null, "instruction": ""}` and the app, which
+reads the model only from that file, exits on validation. `spec.modelConfig` is rejected as an
+unknown field on v1alpha2.
+
+That leaves three paths to a kagent agent, and none is currently open:
+
+| Path | Model? | Status |
+|---|---|---|
+| **BYO** — what the adapter emits today | No — no field for it | Crash-loops. No injection route: `Model` is Bedrock-only, `runtimeConfig.modelConfig` ignored, `spec.modelConfig` rejected, app reads model only from `config.json` |
+| **Declarative** — `modelConfig` + `systemMessage` + `tools` | Yes, and kagent's OpenAI `default-model-config` already exists | **The adapter never emits it.** Supplying `source.image` forces BYO; omitting it errors |
+| **Harness** — what `compatibleHarnesses` targets | Yes, via `AgentHarness.modelConfigRef` | Requires an `AgentHarness` whose `substrate` needs an **`ate.dev` WorkerPool**. No `ate.dev` CRDs are installed — this is a separate VM-substrate stack |
+
+Deploying without an image and with `harness: {type: openclaw}` fails at
+`resolve harness config: harness image is required: openclaw`, which is the registry looking
+for an `AgentHarness` that does not exist.
+
+**So the decision is one of three:**
+
+- **(a)** Treat the missing Declarative path as a product gap and raise it. This is the
+  cheapest fix by far and the one that preserves the demo exactly as designed — kagent already
+  has the OpenAI ModelConfig sitting there unused.
+- **(b)** Install the Agent Substrate (`ate.dev`) stack and use the harness path. Heaviest, but
+  it is evidently the path `compatibleHarnesses`, `skills`, and `prompts` were designed for.
+- **(c)** Build a registry-aware BYO image that fetches its prompt, skills, and model from the
+  registry and writes `config.json` before starting. Keeps "engineers compose, they don't
+  build" intact — the platform team builds the harness once — at the cost of maintaining it.
+
+`compatibleHarnesses` is not validated at apply time and the BYO path ignores it, so the
+`openclaw` guess was neither right nor wrong.
+
+**Untested and independent of all this: the AgentCore path.** That adapter builds server-side
+from source and may translate model and instructions correctly. Since hyperscaler runtimes are
+a demo priority and Bedrock models *are* representable as `Model` artifacts, this is worth
+testing before committing to any of (a)–(c).
 
 `compatibleHarnesses` turned out to be irrelevant on this path: it is not validated at apply
 time and the kagent adapter ignores it. The `openclaw` guess was neither right nor wrong.
