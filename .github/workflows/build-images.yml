@@ -1,0 +1,78 @@
+name: Build and Push Container Images
+
+# Runs on main so that :latest always exists -- the k8s manifests deploy :latest, and a
+# tags-only trigger would mean nothing is deployable until the first release tag.
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths:
+      - 'services/**'
+      - 'support-ui/**'
+      - 'pom.xml'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: catalog-service
+            dockerfile: services/catalog-service/Dockerfile
+          - image: orders-service
+            dockerfile: services/orders-service/Dockerfile
+          - image: customers-service
+            dockerfile: services/customers-service/Dockerfile
+          - image: notifications-service
+            dockerfile: services/notifications-service/Dockerfile
+          - image: support-ui
+            dockerfile: support-ui/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: tags
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_PREFIX}/${{ matrix.image }}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            echo "tags=${IMAGE}:${VERSION},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${IMAGE}:latest,${IMAGE}:${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

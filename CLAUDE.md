@@ -48,7 +48,12 @@ conversation context store; that is all it is allowed to be.
   edit without a bump changes nothing at runtime.
 - **Agent composition changed** → `registry/agents/`. Never in Java.
 - **Version bump** → `.env.example`, `demo/run-demo.sh`, `docs/recipe.md`, `README.md`.
-- **New workload** → `k8s/services/`, `k8s/deploy.sh`, and `k8s/cleanup.sh`.
+- **New workload** → `k8s/services/`, `k8s/deploy.sh`, `k8s/cleanup.sh`, the matrix in
+  `.github/workflows/build-images.yml`, and `k8s/build-images.sh`. Image names in the
+  workflow matrix must match the `image:` lines in `k8s/services/*.yaml` exactly.
+- **Module moved or renamed** → its `Dockerfile` copies paths that mirror the repo layout,
+  because each pom resolves its parent by `relativePath`. Moving a module without updating
+  its Dockerfile produces a build that fails only in CI.
 - **Anything published to the registry** → `k8s/cleanup.sh` must remove it. Registry state
   lives in Postgres and survives a namespace delete.
 - **Demo script change** → mirror in `docs/recipe.md`, and vice versa.
