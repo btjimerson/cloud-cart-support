@@ -15,8 +15,6 @@ spec:
       labels:
         app: support-ui
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
         - name: support-ui
           image: ghcr.io/btjimerson/cloud-cart-support/support-ui:latest

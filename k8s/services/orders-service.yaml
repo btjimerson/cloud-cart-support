@@ -15,8 +15,6 @@ spec:
       labels:
         app: orders-service
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
         - name: orders-service
           image: ghcr.io/btjimerson/cloud-cart-support/orders-service:latest

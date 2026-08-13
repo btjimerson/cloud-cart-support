@@ -15,8 +15,6 @@ spec:
       labels:
         app: notifications-service
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
         - name: notifications-service
           image: ghcr.io/btjimerson/cloud-cart-support/notifications-service:latest
