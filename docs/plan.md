@@ -483,11 +483,25 @@ Three things worth keeping from getting there:
   Registry tokens are short-lived, so a pasted token would have the chat failing silently a
   few hours into a demo. Its credentials live in a Kubernetes Secret, not in the deployment.
 
-**Blocker for the demo script: the seed data is stale.** Orders are dated 2024 and the return
-window is 30 days, so *every* return is now denied — "delivered over 900 days ago". The happy
-path in the 09:00–11:00 beats cannot be shown until order dates are relative to now rather than
-absolute. This is a data fix in `services/orders-service` seed data, not a platform problem,
-but nothing in the return story demos until it is done.
+**Seed data — fixed 2026-08-13.** Order dates were absolute 2024 timestamps, so against a
+30-day return window the entire dataset had expired and the returns flow could only answer
+"no". The seeder now shifts every date by a constant so the newest lands a day before startup,
+preserving the spacing between orders exactly. Verified through the chat UI:
+
+| Persona | Order | State | Answer |
+|---|---|---|---|
+| CUST-001 | ORD-2024-0001 | delivered 27d ago | **eligible** — offers to generate a label |
+| CUST-010 Platinum | ORD-2024-0010 | delivered 44d ago | **denied** under v1, offers store credit instead |
+| CUST-008 | ORD-2024-0008 | shipped, not delivered | **not yet** — must be delivered first |
+
+CUST-010 was deliberately re-dated to 44 days so it falls outside the standard window but
+inside a 90-day tier exception: that is what makes publishing `returns-eligibility` v2 visibly
+change the answer at 14:30. Tests pin these ages so a change that moves them fails rather than
+quietly breaking a beat.
+
+A useful accident: denied at 44 days, the agent *volunteers* store credit as an alternative.
+That is a natural run-up to the 10:30 beat — it reaches for `issueCredit` on its own, and the
+gateway refuses.
 
 Still to do: the Claude Code ↔ registry MCP loop, `REQUIRE_CREATE_APPROVAL` via `helm upgrade`,
 the persona check, and the topology panel (Phase 6).
