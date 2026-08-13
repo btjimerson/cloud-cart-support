@@ -25,6 +25,7 @@ declare -a IMAGES=(
   "customers-service:services/customers-service/Dockerfile"
   "notifications-service:services/notifications-service/Dockerfile"
   "support-ui:support-ui/Dockerfile"
+  "agent-harness:harness/Dockerfile"
 )
 
 package_exists() { # $1 = image name

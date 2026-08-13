@@ -11,6 +11,7 @@ on:
     paths:
       - 'services/**'
       - 'support-ui/**'
+      - 'harness/**'
       - 'pom.xml'
       - '.github/workflows/build-images.yml'
   workflow_dispatch:
@@ -39,6 +40,8 @@ jobs:
             dockerfile: services/notifications-service/Dockerfile
           - image: support-ui
             dockerfile: support-ui/Dockerfile
+          - image: agent-harness
+            dockerfile: harness/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v6
