@@ -428,6 +428,32 @@ The demo story survives intact under this option: the *platform team* builds one
 *engineers* still only compose. That is arguably a better story than "no images anywhere",
 because it is what a real platform team would actually do.
 
+**RESOLVED 2026-08-13 — the harness works and `returns-agent` is live on kagent.**
+
+`harness/` is kagent's app image plus a startup shim that resolves the agent's own artifact
+from the catalog. `kubectl get agents -n kagent` reports `READY=True`, and the agent answers
+over A2A. The proof that the whole chain works is *which* answer it gives: asked about the
+return window it replies "30 days from the delivery date" with the full condition list — text
+that exists only in `returns-eligibility/SKILL.md`, because the policy was deliberately
+stripped out of the prompt in Phase 2. Catalog → harness → prompt + skill + MCP servers →
+model → A2A, end to end.
+
+Two decisions worth keeping:
+
+**The model routes through agentgateway.** `MODEL_BASE_URL` points at
+`agentgateway-proxy.agentgateway-system.svc:8080`, which already has an `openai-primary`
+backend and a `/chat` route. It answers chat completions **with no API key from the caller** —
+the gateway holds and injects it. So no OpenAI key is stored on the agent, and every LLM call
+is under gateway policy and tracing. This is the sibling demo's Step 1 arriving for free.
+
+**One security wart, and it is the registry's to fix.** `DeploymentSpec.env` is
+`map[string]string` — a nested `secretRef` is rejected with *"cannot unmarshal object into Go
+struct field DeploymentSpec.spec.env of type string"*. So the harness's OIDC client secret sits
+in the Deployment as plaintext in the registry's Postgres. The registry redacts its own Secret
+values on read (only `status.dataKeys` comes back), so the harness cannot fetch it either.
+**Ask for `secretRef` support in deployment env**; until then, treat that client as
+demo-only and low-privilege.
+
 **Also confirmed while testing: the shadow-AI beat (16:45) works today, with real data.**
 There are 15 `discovered-*` deployments from the connected runtimes — AgentCore agents with
 live ARNs, `Ready=True`, `Discovered=True`, annotated

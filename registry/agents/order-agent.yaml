@@ -26,10 +26,9 @@ spec:
     - kind: MCPServer
       name: cloudcart-orders
       tag: v1
-  # The kagent adapter refuses a deployment without an image: "image must be specified for
-  # kagent agent deployment". This is the harness that runs the composed content above --
-  # it is kagent's own agent image (IMAGE_REPOSITORY/IMAGE_TAG in the kagent-controller
-  # config), not anything built from this repo. Skills are delivered into it by kagent's
-  # skills-init container. Bump this when kagent is upgraded.
+  # The harness that runs the composed content above. Neither runtime adapter deploys a
+  # composition on its own, so this image resolves this agent's prompt, skills and model
+  # from the catalog at startup. It is built once by the platform team (harness/) and is
+  # identical for every agent -- nothing agent-specific is baked into it.
   source:
-    image: ghcr.io/kagent-dev/kagent/app:0.10.0-beta10
+    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:latest
