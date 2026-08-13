@@ -334,7 +334,52 @@ a Keycloak service account for `support-ui` (client-credentials grant), refreshe
 a pasted token. Worth noting that this is *on message* rather than an annoyance: even the
 frontend has to authenticate to reach an agent.
 
-**Phase 4 — Registry integration. Authored; blocked on two credentials.**
+**Phase 4 — Catalog published and live. Deployment to kagent is blocked by a product gap.**
+
+*Done 2026-08-13:* Keycloak service accounts created; `kagent-oidc` Secret stored in the
+registry; **kagent runtime registered and reporting `Synced` / `SyncOK`**; the full catalog
+published — 4 MCP servers, 3 skills, 5 prompts, 5 agents, 3 AccessPolicies, 1
+RuntimeAccessPolicy.
+
+**The blocker: a kagent-deployed agent gets no model, and there is no way to give it one.**
+
+Deploying `returns-agent` onto kagent produces a kagent `Agent` CR of type **BYO** whose
+entire spec is `image` plus four env vars — `MCP_SERVERS_CONFIG`, `KAGENT_URL`,
+`KAGENT_NAME`, `KAGENT_NAMESPACE`. The pod then crash-loops:
+
+```
+ValidationError: 1 validation error for AgentConfig
+model  Input should be a valid dictionary or object ... input_value=None
+```
+
+Two things are missing from that translation, and both matter:
+
+1. **No model.** The adapter never sets `modelConfig` and never translates the Agent
+   artifact's `modelProvider`/`modelName`. Ruled out by test: `Model` artifacts are
+   **Bedrock-only** (`invalid format: "openai" (known: [bedrock])`), so `DeploymentSpec.modelRef`
+   cannot carry an OpenAI model; `runtimeConfig.modelConfig` is ignored; and provider casing
+   (`openai` vs `OpenAI`) makes no difference. kagent's own `default-model-config` (OpenAI,
+   gpt-4.1-mini) exists and is never referenced.
+2. **No instructions and no skills.** Only `mcpServers` survives the translation. The Prompt
+   and Skill references — the composition the whole demo is about — do not reach the runtime.
+
+Note the bind: omitting `source.image` fails with *"image must be specified for kagent agent
+deployment"*, but supplying one forces type `BYO`, and BYO is precisely the mode where kagent
+does not manage model or instructions. There is no declarative path through this adapter in
+v2026.7.1.
+
+**Open question for the product team:** is `source.image` meant to be a *custom* agent image
+that pulls its own prompt and skills from the registry at runtime — in which case "compose,
+don't build" means building an image after all — or is the kagent adapter's translation
+incomplete in this release? The answer decides whether the 09:30 beat survives as written.
+
+`compatibleHarnesses` turned out to be irrelevant on this path: it is not validated at apply
+time and the kagent adapter ignores it. The `openclaw` guess was neither right nor wrong.
+
+Still to do: the Claude Code ↔ registry MCP loop, `REQUIRE_CREATE_APPROVAL` via `helm upgrade`,
+wiring the `support-ui` service account, and the persona check.
+
+**Previously — the credential work, now complete:**
 
 Done and validated locally:
 - `registry/runtimes/kagent.yaml` — config keys `kagentUrl` and `namespace`, confirmed from
