@@ -38,3 +38,6 @@ build/
 .env
 .envrc
 .claude/worktrees/
+
+# Local service-account credentials (registry/keycloak-setup.sh)
+.env.local
