@@ -2,7 +2,7 @@
 
 Build plan for a **variation** of the Cloud Cart Support demo in which agentregistry is the source of truth for every agent, MCP server, skill, and prompt, and agentgateway is the enforcement point. Narrated as a day in the life of a software engineer building the app.
 
-Sibling to `docs/agentregistry-demo-brief.md`, not a replacement. That brief plans a *migration chapter* appended to the existing recipe. This plans a *separate greenfield demo in its own repo*.
+Sibling to `docs/agentregistry-demo-brief.md` in the [`cloud-cart-support-old`](https://github.com/btjimerson/cloud-cart-support-old) repo, not a replacement. That brief plans a *migration chapter* appended to the existing recipe. This plans a *separate greenfield demo in its own repo*.
 
 **Status:** product surface verified against the live cluster (context `bjimerson-ai`) on 2026-08-12. See §3.
 
@@ -346,7 +346,7 @@ Phases 1–3 don't touch the registry and can start now. 4–6 depend on the Pha
 ## 10. Open questions
 
 1. ~~Keycloak credentials~~ — supplied. Direct access grants are disabled on `solo-ui-frontend` and `ar-backend` is confidential, so API enumeration needs either the `ar-backend` client secret or a browser session. UI walkthrough is the path.
-2. ~~Repo name~~ — **resolved:** `cloud-cart-support-agentic`.
+2. ~~Repo name~~ — **resolved:** `cloud-cart-support`.
 3. ~~Approver RBAC~~ — **resolved:** Keycloak groups via `RBAC_ROLE_CLAIM` (§3.7). `bob` is a natural fit for the low-privilege engineer persona; `admin-user` for the approver.
 4. **Model pinning — partly resolved, one constraint found.** OpenAI is the provider, set on
    each agent via `modelProvider: openai` / `modelName` (free-form strings). But

@@ -10,6 +10,6 @@ spec:
   description: Delayed, lost and misdelivered shipments, including carrier exception codes.
   source:
     repository:
-      url: https://github.com/btjimerson/cloud-cart-support-agentic
+      url: https://github.com/btjimerson/cloud-cart-support
       branch: main
       subfolder: registry/skills/shipping-exceptions

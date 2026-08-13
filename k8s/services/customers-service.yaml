@@ -19,7 +19,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: customers-service
-          image: ghcr.io/btjimerson/cloud-cart-support-agentic/customers-service:latest
+          image: ghcr.io/btjimerson/cloud-cart-support/customers-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

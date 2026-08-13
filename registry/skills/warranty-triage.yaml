@@ -10,6 +10,6 @@ spec:
   description: Warranty coverage periods and what qualifies as a defect.
   source:
     repository:
-      url: https://github.com/btjimerson/cloud-cart-support-agentic
+      url: https://github.com/btjimerson/cloud-cart-support
       branch: main
       subfolder: registry/skills/warranty-triage

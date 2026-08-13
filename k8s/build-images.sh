@@ -12,7 +12,7 @@ set -euo pipefail
 #   ./build-images.sh              # build only
 #   ./build-images.sh --push       # build and push (refuses if the package does not exist)
 
-REGISTRY="${REGISTRY:-ghcr.io/btjimerson/cloud-cart-support-agentic}"
+REGISTRY="${REGISTRY:-ghcr.io/btjimerson/cloud-cart-support}"
 OWNER="${OWNER:-btjimerson}"
 PUSH=false
 [ "${1:-}" = "--push" ] && PUSH=true
@@ -28,7 +28,7 @@ declare -a IMAGES=(
 )
 
 package_exists() { # $1 = image name
-  gh api "user/packages/container/$(printf '%s' "cloud-cart-support-agentic/$1" | sed 's|/|%2F|g')" \
+  gh api "user/packages/container/$(printf '%s' "cloud-cart-support/$1" | sed 's|/|%2F|g')" \
     >/dev/null 2>&1
 }
 

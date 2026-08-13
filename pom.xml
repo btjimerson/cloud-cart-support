@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>dev.snbv2.cloudcart</groupId>
-    <artifactId>cloud-cart-support-agentic-parent</artifactId>
+    <artifactId>cloud-cart-support-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>cloud-cart-support-agentic</name>
+    <name>cloud-cart-support</name>
     <description>Registry-governed multi-agent customer service demo - Parent POM</description>
 
     <modules>

@@ -19,7 +19,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: support-ui
-          image: ghcr.io/btjimerson/cloud-cart-support-agentic/support-ui:latest
+          image: ghcr.io/btjimerson/cloud-cart-support/support-ui:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

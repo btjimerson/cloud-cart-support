@@ -11,11 +11,14 @@ Narrated as a day in the life of an engineer who builds a working multi-agent ap
 writing agent code. See `docs/plan.md` for the full design, the verified product surface,
 and the demo beats.
 
-## Relationship to `cloud-cart-support`
+## Relationship to `cloud-cart-support-old`
 
-This is a **separate variant**, not a branch of it. The sibling repo
-`cloud-cart-support` tells a *migration* story across nine branches (in-app plumbing moves
-out to the gateway). This repo tells a *greenfield* story: the agents were never in the app.
+This is a **separate variant**, not a branch of it. This repo took over the
+`cloud-cart-support` name; the original now lives at
+[`cloud-cart-support-old`](https://github.com/btjimerson/cloud-cart-support-old) (locally at
+`~/Foundry/cloud-cart-support-old`). It tells a *migration* story across nine branches
+(in-app plumbing moves out to the gateway). This repo tells a *greenfield* story: the agents
+were never in the app.
 
 The four MCP services and their seed data were carried over from that repo and will drift.
 That is accepted. Do **not** import its nine-branch propagation rule or its version-sync

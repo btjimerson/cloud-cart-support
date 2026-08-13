@@ -19,7 +19,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: notifications-service
-          image: ghcr.io/btjimerson/cloud-cart-support-agentic/notifications-service:latest
+          image: ghcr.io/btjimerson/cloud-cart-support/notifications-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
