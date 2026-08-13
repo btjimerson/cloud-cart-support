@@ -155,7 +155,49 @@ def fetch_skills(agent_spec: dict, base: str, token: str) -> bool:
     return wrote > 0
 
 
-def build_config(agent_spec: dict, instruction: str) -> dict:
+def remote_agents_from_policy(name: str, base: str, token: str) -> list[dict]:
+    """Build the orchestrator's A2A peers from RuntimeAccessPolicy.
+
+    The set of agents an orchestrator can delegate to is not a property of the agent artifact
+    -- it is a property of policy, and policy is what the gateway enforces at call time. So
+    the harness derives the peer list from the same rules that authorise the calls, rather
+    than from a separate list that could drift out of agreement with them.
+    """
+    policies = _get(f"{base}/v0/runtimeaccesspolicies", token, accept_404=True) or {}
+    namespace = os.getenv("KAGENT_NAMESPACE", "kagent")
+    peers: dict[str, dict] = {}
+
+    for policy in policies.get("items", []):
+        for rule in (policy.get("spec") or {}).get("rules", []):
+            froms = rule.get("from") or []
+            if not any(f.get("kind") == "Deployment" and f.get("name") == name for f in froms):
+                continue
+            for to in rule.get("to") or []:
+                if to.get("kind") != "Deployment" or to.get("name") == name:
+                    continue
+                peer = to["name"]
+                # ADK exposes each peer to the model as a callable, and hyphens are not
+                # valid in an identifier, so the tool name is normalised.
+                peers[peer] = {
+                    "name": peer.replace("-", "_"),
+                    "url": f"http://{peer}.{namespace}.svc:8080",
+                    "description": "",
+                }
+
+    # A description helps the orchestrator route sensibly, so take it from the catalog when
+    # the peer has an entry. Missing entries are not fatal.
+    for peer, cfg in peers.items():
+        agent = _get(f"{base}/v0/agents/{peer}/{os.getenv('AGENT_TAG', 'v1')}", token, accept_404=True)
+        if agent:
+            spec = agent.get("spec") or {}
+            cfg["description"] = spec.get("description") or spec.get("title") or ""
+
+    for cfg in peers.values():
+        log.info("remote agent %s -> %s", cfg["name"], cfg["url"])
+    return list(peers.values())
+
+
+def build_config(agent_spec: dict, instruction: str, remote_agents: list[dict]) -> dict:
     provider = (agent_spec.get("modelProvider") or "openai").lower()
     model = {
         "type": PROVIDER_TYPES.get(provider, provider),
@@ -173,6 +215,7 @@ def build_config(agent_spec: dict, instruction: str) -> dict:
         "description": agent_spec.get("description") or agent_spec.get("title") or "",
         "instruction": instruction,
         "sse_tools": sse_tools_from_env(),
+        "remote_agents": remote_agents,
         "stream": False,
     }
 
@@ -232,14 +275,16 @@ def main() -> None:
     if fetch_skills(spec, base, token):
         os.environ["KAGENT_SKILLS_FOLDER"] = SKILLS_DIR
 
-    config = build_config(spec, instruction)
+    peers = remote_agents_from_policy(name, base, token)
+    config = build_config(spec, instruction, peers)
     with open(os.path.join(CONFIG_DIR, "config.json"), "w") as f:
         json.dump(config, f)
     write_agent_card(name, spec)
 
-    log.info("config ready: model=%s/%s tools=%d skills=%s",
+    log.info("config ready: model=%s/%s tools=%d peers=%d skills=%s",
              config["model"]["type"], config["model"]["model"],
-             len(config["sse_tools"]), os.getenv("KAGENT_SKILLS_FOLDER", "none"))
+             len(config["sse_tools"]), len(config["remote_agents"]),
+             os.getenv("KAGENT_SKILLS_FOLDER", "none"))
 
     argv = ["kagent-adk", "static", "--filepath", CONFIG_DIR,
             "--host", os.getenv("HOST", "0.0.0.0"), "--port", os.getenv("PORT", "8080")]
