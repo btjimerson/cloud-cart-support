@@ -401,10 +401,40 @@ for an `AgentHarness` that does not exist.
 `compatibleHarnesses` is not validated at apply time and the BYO path ignores it, so the
 `openclaw` guess was neither right nor wrong.
 
-**Untested and independent of all this: the AgentCore path.** That adapter builds server-side
-from source and may translate model and instructions correctly. Since hyperscaler runtimes are
-a demo priority and Bedrock models *are* representable as `Model` artifacts, this is worth
-testing before committing to any of (a)–(c).
+**AgentCore tested 2026-08-13 — same shape of problem, different words:**
+
+```
+agentcore: agent "product-agent" image "ghcr.io/kagent-dev/kagent/app:0.10.0-beta10"
+is not an ECR reference and no source repository is set;
+AgentCore requires an ECR image or a git repository
+```
+
+So the finding generalises, and it is the real headline:
+
+> **Neither adapter deploys a composition. Both require an agent implementation** — kagent
+> wants an image (BYO) or a harness; AgentCore wants an ECR image or a git repo it builds
+> server-side. A catalog entry made of prompt + skills + MCP servers is not, by itself,
+> something either runtime can run.
+
+**This reframes option (c) into the strongest path.** An ECR-hosted, registry-aware harness
+image satisfies *both* adapters — AgentCore takes ECR images, and kagent takes any image via
+BYO. One harness image, two runtimes, and the 15:30 "one catalog entry, two deployments"
+beat works as designed. The harness would, on startup, read its own name from the injected
+`KAGENT_NAME`, fetch its Agent artifact from the registry (instructions, skills, model), write
+`config.json`, and exec. `MCP_SERVERS_CONFIG` is already injected by the kagent adapter, and
+`KAGENT_SKILLS_FOLDER` is already understood by kagent's app.
+
+The demo story survives intact under this option: the *platform team* builds one harness; the
+*engineers* still only compose. That is arguably a better story than "no images anywhere",
+because it is what a real platform team would actually do.
+
+**Also confirmed while testing: the shadow-AI beat (16:45) works today, with real data.**
+There are 15 `discovered-*` deployments from the connected runtimes — AgentCore agents with
+live ARNs, `Ready=True`, `Discovered=True`, annotated
+`agentregistry.solo.io/origin: discovered`. They appear as Deployments whose `targetRef` names
+an agent that has no catalog entry (`tag: unknown`), which is precisely the "visible, not
+interactable, because it did not come through the registry" behaviour that beat calls for. No
+build work needed.
 
 `compatibleHarnesses` turned out to be irrelevant on this path: it is not validated at apply
 time and the kagent adapter ignores it. The `openclaw` guess was neither right nor wrong.
