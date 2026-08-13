@@ -7,10 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,28 +45,102 @@ public class A2AClient {
     private final String authToken;
     private final Duration requestTimeout;
 
+    private final String oidcIssuer;
+    private final String oidcClientId;
+    private final String oidcClientSecret;
+
+    /** Cached client-credentials token, refreshed shortly before it expires. */
+    private volatile String cachedToken;
+    private volatile Instant cachedTokenExpiry = Instant.EPOCH;
+
     /**
      * Constructs a new {@code A2AClient}.
      *
      * @param objectMapper    the Jackson object mapper used to build and parse A2A envelopes
      * @param registryBaseUrl the base URL of the agentregistry API, e.g. {@code http://agentregistry:12121}
      * @param defaultRuntime  the runtime connection name to invoke agents on when none is given
-     * @param authToken       bearer token for the registry API; may be blank when auth is disabled
+     * @param authToken       static bearer token for the registry API; blank to mint one instead
      * @param timeoutSeconds  per-request timeout in seconds
+     * @param oidcIssuer      OIDC issuer used to mint tokens when no static token is supplied
+     * @param oidcClientId    client id of this service's account
+     * @param oidcClientSecret client secret of this service's account
      */
     public A2AClient(ObjectMapper objectMapper,
                      @Value("${agentregistry.base-url}") String registryBaseUrl,
                      @Value("${agentregistry.default-runtime}") String defaultRuntime,
                      @Value("${agentregistry.auth-token:}") String authToken,
-                     @Value("${agentregistry.timeout-seconds:60}") long timeoutSeconds) {
+                     @Value("${agentregistry.timeout-seconds:60}") long timeoutSeconds,
+                     @Value("${agentregistry.oidc.issuer:}") String oidcIssuer,
+                     @Value("${agentregistry.oidc.client-id:}") String oidcClientId,
+                     @Value("${agentregistry.oidc.client-secret:}") String oidcClientSecret) {
         this.objectMapper = objectMapper;
         this.registryBaseUrl = registryBaseUrl.replaceAll("/+$", "");
         this.defaultRuntime = defaultRuntime;
         this.authToken = authToken;
+        this.oidcIssuer = oidcIssuer.replaceAll("/+$", "");
+        this.oidcClientId = oidcClientId;
+        this.oidcClientSecret = oidcClientSecret;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         this.requestTimeout = Duration.ofSeconds(timeoutSeconds);
+    }
+
+    /**
+     * Returns a bearer token for the registry, or an empty string when auth is not configured.
+     *
+     * <p>Prefers a statically supplied token, otherwise mints one with the client-credentials
+     * grant and caches it. Registry tokens are short-lived, so a token pasted into config
+     * would leave the chat silently failing a few hours after deploy; minting keeps the
+     * frontend working across a long-running demo without anyone re-pasting anything.
+     *
+     * @return a bearer token, or an empty string if no credentials are configured
+     */
+    private String bearerToken() {
+        if (!authToken.isBlank()) {
+            return authToken;
+        }
+        if (oidcIssuer.isBlank() || oidcClientId.isBlank() || oidcClientSecret.isBlank()) {
+            return "";
+        }
+        String current = cachedToken;
+        if (current != null && Instant.now().isBefore(cachedTokenExpiry)) {
+            return current;
+        }
+        synchronized (this) {
+            if (cachedToken != null && Instant.now().isBefore(cachedTokenExpiry)) {
+                return cachedToken;
+            }
+            try {
+                String form = "grant_type=client_credentials"
+                        + "&client_id=" + URLEncoder.encode(oidcClientId, StandardCharsets.UTF_8)
+                        + "&client_secret=" + URLEncoder.encode(oidcClientSecret, StandardCharsets.UTF_8);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(oidcIssuer + "/protocol/openid-connect/token"))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() >= 400) {
+                    log.error("Token request failed: HTTP %d".formatted(response.statusCode()));
+                    return "";
+                }
+
+                JsonNode body = objectMapper.readTree(response.body());
+                cachedToken = body.path("access_token").asText("");
+                // Refresh a minute early so an in-flight request never rides an expiring token.
+                long ttl = Math.max(60, body.path("expires_in").asLong(300) - 60);
+                cachedTokenExpiry = Instant.now().plusSeconds(ttl);
+                return cachedToken;
+
+            } catch (Exception e) {
+                log.error("Could not mint a registry token: %s".formatted(e.getMessage()));
+                return "";
+            }
+        }
     }
 
     /**
@@ -102,8 +179,9 @@ public class A2AClient {
                     .timeout(requestTimeout)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body));
-            if (!authToken.isBlank()) {
-                builder.header("Authorization", "Bearer " + authToken);
+            String token = bearerToken();
+            if (!token.isBlank()) {
+                builder.header("Authorization", "Bearer " + token);
             }
 
             HttpResponse<String> response = httpClient.send(builder.build(),

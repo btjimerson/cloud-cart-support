@@ -13,6 +13,9 @@ NAMESPACE="${NAMESPACE:-agentic-demo}"
 echo "==> Creating namespace..."
 kubectl apply -f "${SCRIPT_DIR}/namespace.yaml"
 
+echo "==> Creating the frontend's registry credentials..."
+"${SCRIPT_DIR}/create-support-ui-secret.sh"
+
 echo "==> Deploying MCP servers and chat frontend..."
 kubectl apply -f "${SCRIPT_DIR}/services/"
 

@@ -12,6 +12,12 @@ agentregistry:
   default-runtime: ${AGENTREGISTRY_RUNTIME:kagent}
   concierge-agent: ${CONCIERGE_AGENT:support-concierge}
   auth-token: ${AGENTREGISTRY_TOKEN:}
+  # Preferred over a static token: registry tokens are short-lived, so the frontend mints
+  # its own with the client-credentials grant and refreshes before expiry.
+  oidc:
+    issuer: ${OIDC_ISSUER:}
+    client-id: ${OIDC_CLIENT_ID:}
+    client-secret: ${OIDC_CLIENT_SECRET:}
   timeout-seconds: ${AGENTREGISTRY_TIMEOUT_SECONDS:60}
 
 management:

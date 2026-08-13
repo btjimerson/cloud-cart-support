@@ -30,12 +30,24 @@ spec:
               value: "kagent"
             - name: CONCIERGE_AGENT
               value: "support-concierge"
-            - name: AGENTREGISTRY_TOKEN
+            # The frontend mints its own short-lived registry tokens rather than carrying a
+            # pasted one that would expire mid-demo. Credentials come from a Secret created
+            # by k8s/create-support-ui-secret.sh out of .env.local -- they are never committed.
+            - name: OIDC_ISSUER
               valueFrom:
                 secretKeyRef:
-                  name: agentregistry-token
-                  key: token
-                  optional: true
+                  name: support-ui-oidc
+                  key: issuer
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: support-ui-oidc
+                  key: clientId
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: support-ui-oidc
+                  key: clientSecret
           livenessProbe:
             httpGet:
               path: /actuator/health

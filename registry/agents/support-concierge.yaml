@@ -24,5 +24,8 @@ spec:
   # composition on its own, so this image resolves this agent's prompt, skills and model
   # from the catalog at startup. It is built once by the platform team (harness/) and is
   # identical for every agent -- nothing agent-specific is baked into it.
+  # Pinned to an immutable tag rather than :latest. The kagent adapter does not set
+  # imagePullPolicy: Always, so a moving tag silently keeps whatever the node already cached --
+  # a harness change appears to deploy while the old code keeps running. Bump on harness change.
   source:
-    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:latest
+    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:91949dd
