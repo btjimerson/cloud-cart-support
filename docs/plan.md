@@ -465,8 +465,32 @@ build work needed.
 `compatibleHarnesses` turned out to be irrelevant on this path: it is not validated at apply
 time and the kagent adapter ignores it. The `openclaw` guess was neither right nor wrong.
 
+**End to end as of 2026-08-13.** All five agents are `READY` on kagent and the chat UI answers
+through the full chain: browser → `support-ui` → registry A2A proxy → `support-concierge` →
+A2A → specialist → MCP tool → domain service, with the model routed through agentgateway.
+
+Three things worth keeping from getting there:
+
+- **The orchestrator's peers come from policy.** The harness builds `remote_agents` by reading
+  `RuntimeAccessPolicy` for rules whose `from` is this deployment. Which agents it may call is
+  a property of policy, not of the agent artifact, so deriving the list from the rules that
+  authorise the calls means the two cannot drift apart.
+- **Pin the harness image to a SHA tag, never `:latest`.** The kagent adapter does not set
+  `imagePullPolicy: Always`, so a moving tag silently keeps whatever the node already cached.
+  A harness change appeared to deploy while the old code kept running — the concierge came up
+  `READY` with zero peers and nothing in the logs said why.
+- **`support-ui` mints its own tokens** via client-credentials and refreshes a minute early.
+  Registry tokens are short-lived, so a pasted token would have the chat failing silently a
+  few hours into a demo. Its credentials live in a Kubernetes Secret, not in the deployment.
+
+**Blocker for the demo script: the seed data is stale.** Orders are dated 2024 and the return
+window is 30 days, so *every* return is now denied — "delivered over 900 days ago". The happy
+path in the 09:00–11:00 beats cannot be shown until order dates are relative to now rather than
+absolute. This is a data fix in `services/orders-service` seed data, not a platform problem,
+but nothing in the return story demos until it is done.
+
 Still to do: the Claude Code ↔ registry MCP loop, `REQUIRE_CREATE_APPROVAL` via `helm upgrade`,
-wiring the `support-ui` service account, and the persona check.
+the persona check, and the topology panel (Phase 6).
 
 **Previously — the credential work, now complete:**
 
