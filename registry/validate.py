@@ -32,6 +32,10 @@ EXTRA_ENUMS = {
     ("ToRef", "inboundAccess"): ["", "GatewayOnly"],
     ("Principal", "kind"): ["Deployment", "Role"],
     ("ResourceRef", "kind"): ["Agent", "MCPServer", "Skill", "Prompt", "Plugin", "Model"],
+    # Catalog resource kinds are lower-case and differ from manifest kind names: `server`,
+    # not `MCPServer`. There is no `deployment` or `runtimeaccesspolicy` resource kind.
+    ("RuleResource", "kind"): ["server", "agent", "skill", "prompt", "plugin", "model",
+                               "runtime", "secret"],
     ("RuntimeSpec", "type"): ["BedrockAgentCore", "Kagent", "MicrosoftFoundry", "MicrosoftCopilotStudio"],
 }
 
@@ -99,6 +103,46 @@ def check_object(schemas, schema_name, value, path, errors):
             check_object(schemas, prop["$ref"].split("/")[-1], val, child, errors)
 
 
+# AccessPolicy actions are "<scope>:<verb>" or "*". Recovered from the API by probing.
+ACTION_VERBS = {
+    "registry": {"read", "publish", "edit", "deploy", "delete", "admin", "*"},
+    "runtime": {"invoke", "*"},
+}
+
+
+def check_access_policy(spec, where, errors):
+    """Rules the OpenAPI document does not express, learned from the live API."""
+    for i, rule in enumerate(spec.get("rules") or []):
+        for j, action in enumerate(rule.get("actions") or []):
+            path = f"{where}.spec.rules[{i}].actions[{j}]"
+            if action == "*":
+                continue
+            if ":" not in action:
+                errors.append(f"{path}: '{action}' must be '<scope>:<verb>' or '*'")
+                continue
+            scope, _, verb = action.partition(":")
+            if scope not in ACTION_VERBS:
+                errors.append(f"{path}: unknown scope '{scope}' (must be one of {sorted(ACTION_VERBS)})")
+            elif verb not in ACTION_VERBS[scope]:
+                errors.append(f"{path}: invalid verb '{verb}' for scope '{scope}' "
+                              f"(must be one of {sorted(ACTION_VERBS[scope])})")
+            # runtime:invoke resolves a concrete agent, so a wildcard name is rejected.
+            if scope == "runtime":
+                for k, res in enumerate(rule.get("resources") or []):
+                    if res.get("name") == "*":
+                        errors.append(f"{where}.spec.rules[{i}].resources[{k}]: wildcard names "
+                                      f"are not supported for runtime actions")
+
+
+def check_runtime_access_policy(spec, where, errors):
+    for i, rule in enumerate(spec.get("rules") or []):
+        for j, to in enumerate(rule.get("to") or []):
+            # A remote MCP server has no inbound the gateway controls.
+            if to.get("kind") == "MCPServer" and to.get("inboundAccess"):
+                errors.append(f"{where}.spec.rules[{i}].to[{j}]: inboundAccess is not allowed "
+                              f"on kind MCPServer (only on Deployment)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", default=None)
@@ -141,6 +185,11 @@ def main():
         check_object(schemas, KIND_TO_SPEC[kind], doc.get("spec") or {}, f"{where}.spec", errors)
 
         spec = doc.get("spec") or {}
+
+        if kind == "AccessPolicy":
+            check_access_policy(spec, where, errors)
+        if kind == "RuntimeAccessPolicy":
+            check_runtime_access_policy(spec, where, errors)
 
         # An agent composing instructions/skills/plugins must declare compatibleHarnesses.
         # The registry rejects this at apply time; catching it here saves a round trip.

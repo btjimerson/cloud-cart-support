@@ -29,12 +29,15 @@ spec:
     # In-cluster service URL: the registry runs in the same cluster as the controller.
     kagentUrl: http://kagent-controller.kagent:8083
     namespace: kagent
-    oidc:
-      issuer: https://keycloak.pintobean.xyz/realms/solo
-      clientId: agentregistry-kagent
-      clientSecretRef:
-        name: kagent-oidc
-        key: clientSecret
+    # Nested under `auth`, not directly under `config`: the registry rejects the latter with
+    # "auth.oidc is required for kagent runtimes".
+    auth:
+      oidc:
+        issuer: https://keycloak.pintobean.xyz/realms/solo
+        clientId: agentregistry-kagent
+        clientSecretRef:
+          name: kagent-oidc
+          key: clientSecret
   # Exported to workloads on this runtime as OTEL_EXPORTER_OTLP_ENDPOINT. This is what puts
   # kagent and AgentCore traces in the same view -- the cross-runtime story at 15:30 depends
   # on both runtimes reporting here.

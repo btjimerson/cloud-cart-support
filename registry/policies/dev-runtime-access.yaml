@@ -7,7 +7,11 @@
 #      things, so it is written against the deployed instance. `from` also accepts `Role`,
 #      which is how a rule can be scoped to the identity of the end user rather than the agent.
 #
-#   2. Listing an MCPServer on an agent does NOT grant its tools. The agent manifest declares
+#   2. `inboundAccess: GatewayOnly` is only valid on Deployment targets. The registry rejects
+#      it on an MCPServer with "no inbound we control on a remote server" -- a remote MCP
+#      server's inbound is not ours to constrain.
+#
+#   3. Listing an MCPServer on an agent does NOT grant its tools. The agent manifest declares
 #      what the agent *knows about*; this file declares what it is *allowed to call*. Anything
 #      not named in `mcpTools` is denied at the gateway. That gap is deliberate and it is the
 #      demo's centre of gravity -- see the 10:30 beat in docs/plan.md.
@@ -27,12 +31,16 @@ spec:
       to:
         - kind: Deployment
           name: returns-agent
+          inboundAccess: GatewayOnly
         - kind: Deployment
           name: order-agent
+          inboundAccess: GatewayOnly
         - kind: Deployment
           name: complaint-agent
+          inboundAccess: GatewayOnly
         - kind: Deployment
           name: product-agent
+          inboundAccess: GatewayOnly
 
     # --- Returns: order lookup and return initiation. No credit, no cancellation. ----
     - from:
@@ -41,7 +49,6 @@ spec:
       to:
         - kind: MCPServer
           name: cloudcart-orders
-          inboundAccess: GatewayOnly
           mcpTools:
             - getOrderStatus
             - listCustomerOrders
@@ -50,7 +57,6 @@ spec:
             - generateReturnLabel
         - kind: MCPServer
           name: cloudcart-customers
-          inboundAccess: GatewayOnly
           mcpTools:
             - getCustomerInfo
             - getLoyaltyPoints
@@ -63,7 +69,6 @@ spec:
       to:
         - kind: MCPServer
           name: cloudcart-orders
-          inboundAccess: GatewayOnly
           mcpTools:
             - getOrderStatus
             - getTrackingInfo
@@ -77,14 +82,12 @@ spec:
       to:
         - kind: MCPServer
           name: cloudcart-customers
-          inboundAccess: GatewayOnly
           mcpTools:
             - getCustomerInfo
             - getLoyaltyPoints
             - addInteractionNote
         - kind: MCPServer
           name: cloudcart-notifications
-          inboundAccess: GatewayOnly
           mcpTools:
             - createSupportTicket
             - escalateToSupervisor
@@ -98,7 +101,6 @@ spec:
       to:
         - kind: MCPServer
           name: cloudcart-catalog
-          inboundAccess: GatewayOnly
           mcpTools:
             - searchProducts
             - getProductDetails

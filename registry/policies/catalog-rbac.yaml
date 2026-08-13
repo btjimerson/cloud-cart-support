@@ -1,43 +1,56 @@
 # Registry RBAC: who may publish, approve and deploy catalog artifacts.
 #
 # This is a different layer from dev-runtime-access.yaml. That file governs traffic between
-# running things; this one governs who may change the catalog itself. Both are called
-# "access policy" and they are easy to conflate -- the distinction is:
+# running things; this one governs who may change the catalog itself:
 #
 #   AccessPolicy         -> principals + actions on catalog resources   (this file)
 #   RuntimeAccessPolicy  -> from/to between deployments and MCP servers (the other file)
 #
+# Grammar, recovered from the API by submitting invalid values:
+#   actions   "<scope>:<verb>" or "*"
+#             scope   registry | runtime
+#             verbs   registry: read publish edit deploy delete admin | *
+#                     runtime:  invoke | *
+#   resources kind is lower-case and one of:
+#             server agent skill prompt plugin model runtime secret
+#             (note `server`, not `MCPServer` -- the catalog kind name differs from the
+#             manifest kind name)
+#
 # Principals are `Role` (an OIDC group, matched via RBAC_ROLE_CLAIM=Groups against Keycloak)
-# or `Deployment`. The two demo personas are Keycloak users in different groups.
+# or `Deployment`. The two demo personas are Keycloak users in different groups, created by
+# registry/keycloak-setup.sh.
 apiVersion: ar.dev/v1alpha1
 kind: AccessPolicy
 metadata:
   name: support-engineers
 spec:
   description: >-
-    Support engineers compose and publish agents, but cannot approve their own work
-    or change policy.
+    Support engineers compose and publish agents. They deliberately lack deploy, delete and
+    admin: the engineer cannot ship their own work or grant themselves a tool.
   principals:
     - kind: Role
       name: support-engineers
   rules:
     - actions:
-        - read
-        - create
-        - update
+        - registry:read
+        - registry:publish
+        - registry:edit
       resources:
-        - kind: Agent
+        - kind: agent
           name: "*"
-        - kind: Prompt
+        - kind: prompt
           name: "*"
-        - kind: MCPServer
+        - kind: server
           name: "*"
+    # Skills belong to the policy team. Engineers consume them; they do not edit them.
     - actions:
-        - read
+        - registry:read
       resources:
-        - kind: Skill
+        - kind: skill
           name: "*"
-        - kind: RuntimeAccessPolicy
+        - kind: model
+          name: "*"
+        - kind: runtime
           name: "*"
 ---
 apiVersion: ar.dev/v1alpha1
@@ -46,28 +59,57 @@ metadata:
   name: platform-approvers
 spec:
   description: >-
-    Approvers own policy and the approval gate. This is the authority the engineer has to
-    ask for at 11:00 -- the grant is not theirs to give themselves.
+    Approvers own policy, deployment and the approval gate. This is the authority the
+    engineer has to ask for at 11:00 -- the grant is not theirs to give themselves.
   principals:
     - kind: Role
       name: platform-approvers
   rules:
     - actions:
-        - read
-        - create
-        - update
-        - delete
-        - approve
+        - registry:*
       resources:
-        - kind: Agent
+        - kind: agent
           name: "*"
-        - kind: Prompt
+        - kind: prompt
           name: "*"
-        - kind: Skill
+        - kind: skill
           name: "*"
-        - kind: MCPServer
+        - kind: server
           name: "*"
-        - kind: RuntimeAccessPolicy
+        - kind: model
           name: "*"
-        - kind: Deployment
+        - kind: runtime
+          name: "*"
+        - kind: secret
+          name: "*"
+---
+apiVersion: ar.dev/v1alpha1
+kind: AccessPolicy
+metadata:
+  name: support-ui-invoke
+spec:
+  description: >-
+    The chat frontend's service account. It invokes agents and reads the catalog to render
+    what is in play; it can publish nothing. Least privilege for the one identity that is
+    reachable from outside the cluster.
+  principals:
+    - kind: Role
+      name: support-ui
+  rules:
+    # runtime:invoke does not accept a wildcard name -- invocation must name a concrete
+    # agent. That suits the frontend exactly: it only ever calls the concierge, and reaching
+    # a specialist directly is the concierge's job, governed in dev-runtime-access.yaml.
+    - actions:
+        - runtime:invoke
+      resources:
+        - kind: agent
+          name: support-concierge
+    - actions:
+        - registry:read
+      resources:
+        - kind: agent
+          name: "*"
+        - kind: server
+          name: "*"
+        - kind: skill
           name: "*"
