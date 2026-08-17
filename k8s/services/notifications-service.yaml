@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: notifications-service
-          image: ghcr.io/btjimerson/cloud-cart-support/notifications-service:16a8e94
+          image: ghcr.io/btjimerson/cloud-cart-support/notifications-service:7c4685b
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

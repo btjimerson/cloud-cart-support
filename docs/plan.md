@@ -503,6 +503,55 @@ A useful accident: denied at 44 days, the agent *volunteers* store credit as an 
 That is a natural run-up to the 10:30 beat — it reaches for `issueCredit` on its own, and the
 gateway refuses.
 
+## Phase 5 — Authorization
+
+**The published policy was not enforced, and could not be.** Asked to issue store credit —
+a tool `RuntimeAccessPolicy` deliberately withholds — `returns-agent` did it:
+
+> "The $50.00 store credit has been successfully issued to customer CUST-010."
+
+The cause is structural. The kagent adapter hands agents MCP URLs and they connect straight to
+the services, so nothing sits in the path to refuse a call. Three separate confirmations that
+the catalog had no way to enforce anything:
+
+- **No enforcement point.** `MCP_SERVERS_CONFIG` pointed at `orders-service.agentic-demo.svc`
+  directly.
+- **kagent's own policy has nothing to bind to.** `accesspolicies.policy.kagent-enterprise.solo.io`
+  supports exactly what we want — `action`, `from.subjects`, `targetRef` with `tools` — but
+  `targetRef.kind: MCPServer` needs a kagent MCPServer resource, and the BYO path creates none.
+  Zero policies existed; the registry synced nothing.
+- **The registry cannot drive an in-cluster gateway.** `GatewaySpec` requires `networkId` and
+  `subnetId` and carries an AWS config block: the `Gateway` kind provisions a *managed gateway
+  in AWS*. There is no way to register the agentgateway running in this cluster, so the
+  published `RuntimeAccessPolicy` has no consumer on the kagent path at all.
+
+**Built: MCP now routes through agentgateway** (`k8s/agentgateway/mcp-federation.yaml`). An
+`AgentgatewayBackend` federates all four servers behind `/cloudcart/mcp`, on its own prefix so
+it does not collide with the `/mcp` route belonging to the other demo. All 19 tools resolve
+through it. Three things it required, none obvious:
+
+| Requirement | Symptom when missing |
+|---|---|
+| `appProtocol: agentgateway.dev/mcp` on the service port | `mcp: no backends configured`, 503 |
+| `URLRewrite` stripping the `/cloudcart` prefix | backends see `/cloudcart/mcp`, answer 404 |
+| Streamable HTTP instead of SSE | the federation backend speaks streamable to `/mcp` |
+
+That last one surfaced a latent bug: `catalog-service` pinned
+`spring-ai-starter-mcp-server-webmvc` **1.0.3** while its three siblings inherited 1.1.2. The
+older release has no streamable transport, so it silently ignored `protocol: STREAMABLE` and
+kept serving SSE — one federation target 404ing while the rest worked.
+
+**Next, to finish the beat:** point the MCPServer artifacts at the gateway URL so agents go
+through it, then write the deny rule. Note the gateway prefixes federated tool names by target
+(`orders-service-8080_getOrderStatus`), so policy and any tool allow-list must use the prefixed
+form — and the prefix derives from service+port, not from the target `name` in the backend.
+
+**The open question this leaves for the product team.** With `Gateway` being AWS-only, the
+11:00 beat as designed — change policy in the registry, gateway enforces, no redeploy — cannot
+work on kagent in v2026.7.1. The enforcement we can build lives in agentgateway CRDs, so the
+control point is `kubectl`, not the catalog. Ask for either registry-driven in-cluster gateways
+or generation of kagent `AccessPolicy` resources from `RuntimeAccessPolicy`.
+
 Still to do: the Claude Code ↔ registry MCP loop, `REQUIRE_CREATE_APPROVAL` via `helm upgrade`,
 the persona check, and the topology panel (Phase 6).
 
