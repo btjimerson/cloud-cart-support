@@ -24,10 +24,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
+        <!-- Version comes from the parent's dependencyManagement, like the other three
+             services. This module used to pin 1.0.3, which resolved an older autoconfiguration
+             with no streamable-HTTP transport: the service kept serving SSE and only ever
+             answered 404 at /mcp, so the gateway could not federate it. -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
-            <version>1.0.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

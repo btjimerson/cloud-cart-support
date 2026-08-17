@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: orders-service
-          image: ghcr.io/btjimerson/cloud-cart-support/orders-service:d88e51f
+          image: ghcr.io/btjimerson/cloud-cart-support/orders-service:16a8e94
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
