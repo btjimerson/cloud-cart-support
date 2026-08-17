@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: support-ui
-          image: ghcr.io/btjimerson/cloud-cart-support/support-ui:e9283a4
+          image: ghcr.io/btjimerson/cloud-cart-support/support-ui:2728dcb
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -30,6 +30,12 @@ spec:
               value: "kagent"
             - name: CONCIERGE_AGENT
               value: "support-concierge"
+            # A concierge turn can span an A2A hop plus several MCP tool calls, which the
+            # 60s default does not cover: the slowest path (a denied Platinum return, where
+            # the agent also reasons about alternatives) timed out and surfaced as "the agent
+            # is unavailable".
+            - name: AGENTREGISTRY_TIMEOUT_SECONDS
+              value: "180"
             # The frontend mints its own short-lived registry tokens rather than carrying a
             # pasted one that would expire mid-demo. Credentials come from a Secret created
             # by k8s/create-support-ui-secret.sh out of .env.local -- they are never committed.
