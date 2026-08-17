@@ -72,6 +72,41 @@ class A2AClientTest {
         assertEquals("It ships tomorrow.", parse(body).content());
     }
 
+    /**
+     * An agent that needs more information returns a task in {@code input-required} whose only
+     * content is a structured elicitation -- a data part with no text anywhere. That is a
+     * question for the customer, and the chat showed it as "returned an empty response".
+     */
+    @Test
+    void inputRequiredElicitation_isRenderedAsAQuestion() throws Exception {
+        String body = """
+            {"jsonrpc":"2.0","id":"1","result":{
+              "kind":"task",
+              "status":{"state":"input-required","message":{"role":"agent","parts":[
+                {"kind":"data","data":{"args":{"originalFunctionCall":{"name":"ask_user","args":{"questions":[
+                  {"question":"What will you primarily use the headset for?",
+                   "choices":["Gaming","Music","Work/Calls"]}
+                ]}}}}}
+              ]}}}}
+            """;
+        A2AClient.A2AReply reply = parse(body);
+
+        assertFalse(reply.failed(), "an agent asking a question is not a failure");
+        assertTrue(reply.content().contains("What will you primarily use the headset for?"));
+        assertTrue(reply.content().contains("Gaming"));
+    }
+
+    @Test
+    void statusMessageText_isUsedWhenThereAreNoArtifacts() throws Exception {
+        String body = """
+            {"jsonrpc":"2.0","id":"1","result":{
+              "kind":"task",
+              "status":{"state":"input-required","message":{"role":"agent","parts":[
+                {"kind":"text","text":"Which order do you mean?"}]}}}}
+            """;
+        assertEquals("Which order do you mean?", parse(body).content());
+    }
+
     @Test
     void jsonRpcError_isReportedAsFailure() throws Exception {
         String body = """

@@ -281,7 +281,23 @@ public class A2AClient {
             }
 
             if (texts.isEmpty()) {
-                log.warn("A2A response from %s contained no text parts: %s".formatted(deploymentName, rawBody));
+                // An agent that needs more information answers with a task in `input-required`
+                // whose only content is a structured elicitation -- a data part, no text. That
+                // is a question for the customer, not a failure, so it is rendered rather than
+                // reported as an empty response.
+                JsonNode status = result.path("status");
+                collectTextParts(status.path("message").path("parts"), texts);
+                if (texts.isEmpty()) {
+                    String questions = elicitedQuestions(status.path("message"));
+                    if (!questions.isBlank()) {
+                        return new A2AReply(questions, deploymentName, false);
+                    }
+                }
+            }
+
+            if (texts.isEmpty()) {
+                log.warn("A2A response from %s contained no text parts (state=%s): %s".formatted(
+                        deploymentName, result.path("status").path("state").asText("unknown"), rawBody));
                 return A2AReply.error("The %s agent returned an empty response.".formatted(deploymentName));
             }
 
@@ -290,6 +306,70 @@ public class A2AClient {
         } catch (Exception e) {
             log.error("Could not parse A2A response from %s: %s".formatted(deploymentName, e.getMessage()));
             return A2AReply.error("The %s agent returned a response we could not read.".formatted(deploymentName));
+        }
+    }
+
+    /**
+     * Renders an agent's structured elicitation as plain text.
+     *
+     * <p>The tool call arrives nested several levels deep inside a data part, and the exact
+     * envelope is an ADK implementation detail. Rather than bind to that path, this searches
+     * the subtree for any {@code questions} array and formats what it finds, so a change in the
+     * wrapping does not silently turn a question back into an "empty response".
+     *
+     * @param statusMessage the {@code status.message} node of an A2A task
+     * @return the questions as text, or an empty string if none were found
+     */
+    private String elicitedQuestions(JsonNode statusMessage) {
+        List<JsonNode> found = new ArrayList<>();
+        findArrays(statusMessage, "questions", found);
+        if (found.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder out = new StringBuilder();
+        for (JsonNode questions : found) {
+            for (JsonNode q : questions) {
+                String text = q.path("question").asText("");
+                if (text.isBlank()) {
+                    continue;
+                }
+                if (!out.isEmpty()) {
+                    out.append("\n\n");
+                }
+                out.append(text);
+                JsonNode choices = q.path("choices");
+                if (choices.isArray() && !choices.isEmpty()) {
+                    List<String> options = new ArrayList<>();
+                    choices.forEach(c -> options.add(c.asText()));
+                    out.append("\n").append(String.join(" · ", options));
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    /**
+     * Collects every array stored under the given field name anywhere in the tree.
+     *
+     * @param node  the node to walk
+     * @param field the field name to look for
+     * @param sink  the list that matching arrays are appended to
+     */
+    private void findArrays(JsonNode node, String field, List<JsonNode> sink) {
+        if (node == null || node.isMissingNode()) {
+            return;
+        }
+        if (node.isObject()) {
+            node.fields().forEachRemaining(entry -> {
+                if (field.equals(entry.getKey()) && entry.getValue().isArray()) {
+                    sink.add(entry.getValue());
+                } else {
+                    findArrays(entry.getValue(), field, sink);
+                }
+            });
+        } else if (node.isArray()) {
+            node.forEach(child -> findArrays(child, field, sink));
         }
     }
 
