@@ -24,6 +24,8 @@ What it reads
 ``MCP_SERVERS_CONFIG``    injected by the kagent adapter; JSON list of {name,type,url}
 ``MODEL_BASE_URL``        optional; point the model at agentgateway so LLM calls are governed
 ``MODEL_TEMPERATURE``     optional, default 0.1 -- low, because A2A multiplies LLM variance
+``HARNESS_TRACING_ENABLED`` set to false to leave tracing off; on by default when an
+                          OTLP endpoint is present
 
 Config and skills are written under /tmp because the app's ``/config`` is a read-only Secret
 mount on the kagent path.
@@ -261,6 +263,34 @@ def write_agent_card(name: str, agent_spec: dict) -> None:
     log.info("agent-card.json synthesised")
 
 
+def configure_tracing_env() -> None:
+    """Force tracing on for the app we are about to exec.
+
+    The kagent adapter appends its own ``OTEL_TRACING_ENABLED=false`` to the pod's environment
+    *after* whatever the deployment sets, and Kubernetes keeps the last value of a duplicated
+    name -- so setting it on the Deployment looks correct in the manifest and has no effect.
+    The app reads the variable at startup and defaults it to false, so spans are never
+    exported and the registry's trace view stays empty with nothing in the logs to say why.
+
+    The harness is the last thing to run before the app, so it settles the question here.
+    Intent is carried in ``HARNESS_TRACING_ENABLED`` rather than ``OTEL_TRACING_ENABLED``,
+    because the latter is exactly the name being overwritten.
+    """
+    if os.getenv("HARNESS_TRACING_ENABLED", "true").lower() != "true":
+        log.info("tracing disabled by HARNESS_TRACING_ENABLED")
+        return
+
+    endpoint = (os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+                or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")).strip()
+    if not endpoint:
+        log.info("no OTLP endpoint set; leaving tracing off")
+        return
+
+    os.environ["OTEL_TRACING_ENABLED"] = "true"
+    os.environ.setdefault("OTEL_SERVICE_NAME", os.getenv("KAGENT_NAME", "agent"))
+    log.info("tracing enabled -> %s", endpoint)
+
+
 def main() -> None:
     name = os.getenv("KAGENT_NAME") or os.getenv("AGENT_NAME")
     if not name:
@@ -301,6 +331,8 @@ def main() -> None:
              config["model"]["type"], config["model"]["model"],
              len(config["http_tools"]) + len(config["sse_tools"]), len(config["remote_agents"]),
              os.getenv("KAGENT_SKILLS_FOLDER", "none"))
+
+    configure_tracing_env()
 
     argv = ["kagent-adk", "static", "--filepath", CONFIG_DIR,
             "--host", os.getenv("HOST", "0.0.0.0"), "--port", os.getenv("PORT", "8080")]
