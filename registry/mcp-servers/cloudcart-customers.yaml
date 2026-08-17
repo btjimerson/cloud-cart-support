@@ -10,5 +10,5 @@ spec:
   title: Cloud Cart Customers
   description: Customer profile, loyalty points, interaction notes and store credit. Contains state-changing tools.
   remote:
-    type: sse
-    url: http://customers-service.agentic-demo.svc:8080/sse
+    type: streamable-http
+    url: http://customers-service.agentic-demo.svc:8080/mcp

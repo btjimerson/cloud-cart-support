@@ -10,5 +10,5 @@ spec:
   title: Cloud Cart Orders
   description: Order status, tracking, cancellation and return initiation. Contains state-changing tools.
   remote:
-    type: sse
-    url: http://orders-service.agentic-demo.svc:8080/sse
+    type: streamable-http
+    url: http://orders-service.agentic-demo.svc:8080/mcp

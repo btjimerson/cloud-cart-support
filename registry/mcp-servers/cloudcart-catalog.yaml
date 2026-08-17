@@ -10,5 +10,5 @@ spec:
   title: Cloud Cart Catalog
   description: Product search, details, availability and recommendations. Read-only.
   remote:
-    type: sse
-    url: http://catalog-service.agentic-demo.svc:8080/sse
+    type: streamable-http
+    url: http://catalog-service.agentic-demo.svc:8080/mcp

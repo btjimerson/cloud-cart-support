@@ -10,5 +10,5 @@ spec:
   title: Cloud Cart Notifications
   description: Outbound email and SMS, support tickets and supervisor escalation. Contains outbound-messaging tools.
   remote:
-    type: sse
-    url: http://notifications-service.agentic-demo.svc:8080/sse
+    type: streamable-http
+    url: http://notifications-service.agentic-demo.svc:8080/mcp

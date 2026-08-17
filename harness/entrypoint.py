@@ -91,25 +91,38 @@ def mint_token() -> str:
         return json.loads(r.read().decode())["access_token"]
 
 
-def sse_tools_from_env() -> list[dict]:
-    """Translate the adapter's MCP_SERVERS_CONFIG into the app's sse_tools.
+def mcp_tools_from_env() -> tuple[list[dict], list[dict]]:
+    """Translate the adapter's MCP_SERVERS_CONFIG into the app's tool lists.
 
     The adapter already resolves the agent's mcpServers refs to concrete URLs, so the harness
     does not re-resolve them -- it only reshapes what it was handed. Which *tools* on those
     servers the agent may actually call is not decided here at all: that is the gateway's
-    call, from RuntimeAccessPolicy.
+    call, from policy.
+
+    The app keeps streamable-HTTP and SSE servers in separate fields, and the adapter labels
+    every entry ``type: remote`` regardless, so the transport is inferred from the URL: a
+    ``/sse`` path is SSE, anything else is streamable HTTP. Getting this wrong does not fail
+    loudly -- the agent starts fine and then cannot open a session, which surfaces only as an
+    empty answer.
+
+    :return: ``(http_tools, sse_tools)``
     """
     raw = os.getenv("MCP_SERVERS_CONFIG", "").strip()
     if not raw:
-        return []
-    tools = []
+        return [], []
+    http_tools, sse_tools = [], []
     for server in json.loads(raw):
         url = server.get("url")
         if not url:
             continue
-        tools.append({"params": {"url": url}})
-        log.info("MCP server %s -> %s", server.get("name", "?"), url)
-    return tools
+        if urllib.parse.urlparse(url).path.rstrip("/").endswith("/sse"):
+            sse_tools.append({"params": {"url": url}})
+            transport = "sse"
+        else:
+            http_tools.append({"params": {"url": url}})
+            transport = "streamable-http"
+        log.info("MCP server %s -> %s (%s)", server.get("name", "?"), url, transport)
+    return http_tools, sse_tools
 
 
 def fetch_skills(agent_spec: dict, base: str, token: str) -> bool:
@@ -197,7 +210,8 @@ def remote_agents_from_policy(name: str, base: str, token: str) -> list[dict]:
     return list(peers.values())
 
 
-def build_config(agent_spec: dict, instruction: str, remote_agents: list[dict]) -> dict:
+def build_config(agent_spec: dict, instruction: str, remote_agents: list[dict],
+                 http_tools: list[dict], sse_tools: list[dict]) -> dict:
     provider = (agent_spec.get("modelProvider") or "openai").lower()
     model = {
         "type": PROVIDER_TYPES.get(provider, provider),
@@ -214,7 +228,8 @@ def build_config(agent_spec: dict, instruction: str, remote_agents: list[dict]) 
         "model": model,
         "description": agent_spec.get("description") or agent_spec.get("title") or "",
         "instruction": instruction,
-        "sse_tools": sse_tools_from_env(),
+        "http_tools": http_tools,
+        "sse_tools": sse_tools,
         "remote_agents": remote_agents,
         "stream": False,
     }
@@ -276,14 +291,15 @@ def main() -> None:
         os.environ["KAGENT_SKILLS_FOLDER"] = SKILLS_DIR
 
     peers = remote_agents_from_policy(name, base, token)
-    config = build_config(spec, instruction, peers)
+    http_tools, sse_tools = mcp_tools_from_env()
+    config = build_config(spec, instruction, peers, http_tools, sse_tools)
     with open(os.path.join(CONFIG_DIR, "config.json"), "w") as f:
         json.dump(config, f)
     write_agent_card(name, spec)
 
     log.info("config ready: model=%s/%s tools=%d peers=%d skills=%s",
              config["model"]["type"], config["model"]["model"],
-             len(config["sse_tools"]), len(config["remote_agents"]),
+             len(config["http_tools"]) + len(config["sse_tools"]), len(config["remote_agents"]),
              os.getenv("KAGENT_SKILLS_FOLDER", "none"))
 
     argv = ["kagent-adk", "static", "--filepath", CONFIG_DIR,
