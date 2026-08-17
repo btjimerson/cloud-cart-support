@@ -1,6 +1,7 @@
 package dev.snbv2.cloudcart.support.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.snbv2.cloudcart.support.model.AgentHandoff;
 import dev.snbv2.cloudcart.support.model.ConversationContext;
 import dev.snbv2.cloudcart.support.service.A2AClient;
 import dev.snbv2.cloudcart.support.service.ContextManager;
@@ -106,6 +107,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         response.put("conversation_id", ctx.getConversationId());
         response.put("agent", reply.agent());
         response.put("tool_calls", List.of());
+
+        for (String specialist : reply.delegates()) {
+            AgentHandoff handoff = contextManager.handoff(
+                    ctx.getConversationId(), reply.agent(), specialist, "delegated over A2A");
+            if (handoff != null) {
+                response.put("handoff", Map.of(
+                        "from_agent", handoff.getFromAgent(),
+                        "to_agent", handoff.getToAgent(),
+                        "reason", handoff.getReason()));
+            }
+        }
 
         sendJson(session, response);
     }

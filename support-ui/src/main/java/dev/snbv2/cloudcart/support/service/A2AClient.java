@@ -290,7 +290,7 @@ public class A2AClient {
                 if (texts.isEmpty()) {
                     String questions = elicitedQuestions(status.path("message"));
                     if (!questions.isBlank()) {
-                        return new A2AReply(questions, deploymentName, false);
+                        return new A2AReply(questions, deploymentName, false, delegatesFrom(result));
                     }
                 }
             }
@@ -301,7 +301,7 @@ public class A2AClient {
                 return A2AReply.error("The %s agent returned an empty response.".formatted(deploymentName));
             }
 
-            return new A2AReply(String.join("\n\n", texts), deploymentName, false);
+            return new A2AReply(String.join("\n\n", texts), deploymentName, false, delegatesFrom(result));
 
         } catch (Exception e) {
             log.error("Could not parse A2A response from %s: %s".formatted(deploymentName, e.getMessage()));
@@ -398,13 +398,59 @@ public class A2AClient {
     }
 
     /**
+     * Names the specialists an orchestrator delegated to while answering.
+     *
+     * <p>A delegation and an MCP tool call look alike in the response -- both are data parts
+     * carrying a {@code name} -- so the distinguishing mark is {@code subagent_session_id} on
+     * the result, which only a sub-agent call produces. Matching on that rather than on the
+     * name avoids mistaking a tool for an agent.
+     *
+     * <p>Names come back underscored because they are exposed to the model as callables;
+     * they are converted back to the catalog's hyphenated form for display.
+     *
+     * @param result the A2A task result node
+     * @return the delegated agent names, in the order they were called
+     */
+    private List<String> delegatesFrom(JsonNode result) {
+        List<String> delegates = new ArrayList<>();
+        for (JsonNode turn : result.path("history")) {
+            for (JsonNode part : turn.path("parts")) {
+                JsonNode data = part.path("data");
+                if (!data.path("response").path("subagent_session_id").isMissingNode()) {
+                    String name = data.path("name").asText("");
+                    if (!name.isBlank()) {
+                        String display = name.replace('_', '-');
+                        if (!delegates.contains(display)) {
+                            delegates.add(display);
+                        }
+                    }
+                }
+            }
+        }
+        return delegates;
+    }
+
+    /**
      * The outcome of an A2A invocation.
      *
-     * @param content the reply text, or a user-facing message when {@code failed} is true
-     * @param agent   the deployment name of the agent that answered
-     * @param failed  whether the invocation failed
+     * @param content   the reply text, or a user-facing message when {@code failed} is true
+     * @param agent     the deployment name of the agent that answered
+     * @param failed    whether the invocation failed
+     * @param delegates specialists the answering agent delegated to, in call order; empty
+     *                  when it answered by itself
      */
-    public record A2AReply(String content, String agent, boolean failed) {
+    public record A2AReply(String content, String agent, boolean failed, List<String> delegates) {
+
+        /**
+         * Builds a reply with no recorded delegation.
+         *
+         * @param content the reply text
+         * @param agent   the answering agent
+         * @param failed  whether the invocation failed
+         */
+        public A2AReply(String content, String agent, boolean failed) {
+            this(content, agent, failed, List.of());
+        }
 
         /**
          * Builds a failed reply attributed to the system rather than to an agent.

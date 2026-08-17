@@ -1,5 +1,6 @@
 package dev.snbv2.cloudcart.support.controller;
 
+import dev.snbv2.cloudcart.support.model.AgentHandoff;
 import dev.snbv2.cloudcart.support.model.ConversationContext;
 import dev.snbv2.cloudcart.support.service.A2AClient;
 import dev.snbv2.cloudcart.support.service.ContextManager;
@@ -80,12 +81,27 @@ public class ChatController {
         contextManager.addTurn(ctx.getConversationId(), "assistant",
                 reply.content(), reply.agent(), null);
 
-        return ResponseEntity.ok(Map.of(
-                "response", reply.content(),
-                "conversation_id", ctx.getConversationId(),
-                "agent", reply.agent(),
-                "tool_calls", List.of()
-        ));
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("response", reply.content());
+        body.put("conversation_id", ctx.getConversationId());
+        body.put("agent", reply.agent());
+        body.put("tool_calls", List.of());
+
+        // Delegation is no longer an in-process handoff, but it is still the thing worth
+        // showing: the concierge answered by asking a specialist. Recording it keeps the
+        // conversation's handoff history meaningful now that a router class no longer writes it.
+        for (String specialist : reply.delegates()) {
+            AgentHandoff handoff = contextManager.handoff(
+                    ctx.getConversationId(), reply.agent(), specialist, "delegated over A2A");
+            if (handoff != null) {
+                body.put("handoff", Map.of(
+                        "from_agent", handoff.getFromAgent(),
+                        "to_agent", handoff.getToAgent(),
+                        "reason", handoff.getReason()));
+            }
+        }
+
+        return ResponseEntity.ok(body);
     }
 
     /**

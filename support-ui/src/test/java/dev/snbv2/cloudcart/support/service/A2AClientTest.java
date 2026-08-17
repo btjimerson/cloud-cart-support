@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -105,6 +106,43 @@ class A2AClientTest {
                 {"kind":"text","text":"Which order do you mean?"}]}}}}
             """;
         assertEquals("Which order do you mean?", parse(body).content());
+    }
+
+    /**
+     * A delegation and an MCP tool call are both data parts carrying a name; only a sub-agent
+     * call produces subagent_session_id, so that is what distinguishes them. Without this the
+     * conversation's handoff history stays empty even though the concierge did delegate.
+     */
+    @Test
+    void delegationToASpecialist_isReported() throws Exception {
+        String body = """
+            {"jsonrpc":"2.0","id":"1","result":{
+              "kind":"task",
+              "artifacts":[{"parts":[{"kind":"text","text":"You can return it."}]}],
+              "history":[
+                {"parts":[{"kind":"data","data":{"name":"returns_agent","args":{"request":"can I return it"}}}]},
+                {"parts":[{"kind":"data","data":{"name":"returns_agent",
+                   "response":{"result":"yes","subagent_session_id":"s-1"}}}]}
+              ]}}
+            """;
+        A2AClient.A2AReply reply = parse(body);
+
+        assertEquals(List.of("returns-agent"), reply.delegates(),
+                "the delegate should be reported in the catalog's hyphenated form");
+    }
+
+    @Test
+    void mcpToolCalls_areNotMistakenForDelegation() throws Exception {
+        String body = """
+            {"jsonrpc":"2.0","id":"1","result":{
+              "kind":"task",
+              "artifacts":[{"parts":[{"kind":"text","text":"Delivered yesterday."}]}],
+              "history":[
+                {"parts":[{"kind":"data","data":{"name":"getOrderStatus","args":{"orderId":"ORD-1"}}}]},
+                {"parts":[{"kind":"data","data":{"name":"getOrderStatus","response":{"result":"delivered"}}}]}
+              ]}}
+            """;
+        assertTrue(parse(body).delegates().isEmpty(), "an MCP tool call is not a handoff");
     }
 
     @Test

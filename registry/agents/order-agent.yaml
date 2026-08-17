@@ -34,4 +34,4 @@ spec:
   # imagePullPolicy: Always, so a moving tag silently keeps whatever the node already cached --
   # a harness change appears to deploy while the old code keeps running. Bump on harness change.
   source:
-    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:40a03d1
+    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:61a24cc
