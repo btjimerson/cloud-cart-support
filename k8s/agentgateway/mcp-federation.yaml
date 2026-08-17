@@ -1,0 +1,80 @@
+# Puts agentgateway in front of the four MCP servers.
+#
+# Why this exists: without it there is no enforcement point. Agents receive MCP URLs from the
+# kagent adapter and connect straight to the services, so the RuntimeAccessPolicy published in
+# the catalog has nothing to enforce it -- a tool the policy withholds is still callable. This
+# backend federates the four servers behind one gateway endpoint so tool calls pass through
+# something that can say no.
+#
+# Federation also means agents see one MCP endpoint rather than four, and which server a tool
+# came from stops being the agent's concern.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: cloudcart-mcp
+  namespace: agentgateway-system
+spec:
+  mcp:
+    targets:
+      - name: cloudcart-catalog
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: catalog-service
+      - name: cloudcart-orders
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: orders-service
+      - name: cloudcart-customers
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: customers-service
+      - name: cloudcart-notifications
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: notifications-service
+---
+# A dedicated path so this demo does not collide with the /mcp route that belongs to the
+# user's other demo on the same gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cloudcart-mcp
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agentgateway-proxy
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cloudcart/mcp
+      # The prefix is rewritten to /mcp because the backends serve MCP there. Without this the
+      # gateway forwards /cloudcart/mcp verbatim and the services answer 404.
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: cloudcart-mcp

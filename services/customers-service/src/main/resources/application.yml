@@ -11,7 +11,10 @@ spring:
   ai:
     mcp:
       server:
-        protocol: SSE
+        # Streamable HTTP rather than SSE: agentgateway's MCP federation backend speaks
+        # streamable HTTP to /mcp, and routing through the gateway is what makes tool-level
+        # policy enforceable at all. SSE bypassed it.
+        protocol: STREAMABLE
         capabilities:
           tool: true
         name: customers-service

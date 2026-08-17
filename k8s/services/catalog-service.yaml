@@ -39,9 +39,16 @@ kind: Service
 metadata:
   name: catalog-service
   namespace: agentic-demo
+  labels:
+    app: catalog-service
+    # Selected by the gateway's MCP federation backend in k8s/agentgateway/.
+    cloudcart.dev/mcp: "true"
 spec:
   selector:
     app: catalog-service
   ports:
+    # appProtocol is how agentgateway recognises this as an MCP backend port. Without it the
+    # federation backend resolves to nothing and the gateway answers "no backends configured".
     - port: 8080
       targetPort: 8080
+      appProtocol: agentgateway.dev/mcp
