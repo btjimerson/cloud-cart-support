@@ -1,0 +1,41 @@
+# Delegated token exchange on the hop into the agents.
+#
+# The STS needs no deploying: the enterprise-agentgateway install already runs one on port 7777
+# of its own service. It advertises
+# `grant_types_supported: ["urn:ietf:params:oauth:grant-type:token-exchange"]` at
+# /.well-known/oauth-authorization-server, with a token endpoint at /oauth2/token and a JWKS.
+#
+# What the exchange does, verified against the live STS: given the caller's Keycloak token as
+# `subject_token`, it mints a new JWT that **preserves `sub` and `client_id`** but re-issues
+# under the gateway's own issuer, valid four hours. So downstream sees who the call is for
+# rather than only which service made it.
+#
+#   subject  iss=keycloak/realms/solo  sub=3549ec9e…  Groups=[admins]
+#   exchanged iss=enterprise-agentgateway…:7777  sub=3549ec9e…  scope="profile email"
+#
+# NOTE — the exchanged token does **not** carry `Groups`. Identity survives the exchange;
+# group membership does not. Anything downstream that authorises by group therefore needs the
+# original claims propagated as well (kagent's OBO_CLAIMS_TO_PROPAGATE), not just the exchanged
+# token. Worth knowing before building a demo beat on "two users get different answers".
+#
+# targetRefs is left pointing at the MCP route until the A2A route exists; repoint it at the
+# agent route once that lands. The shape below is accepted by the API server (server dry run).
+apiVersion: enterpriseagentgateway.solo.io/v1alpha1
+kind: EnterpriseAgentgatewayPolicy
+metadata:
+  name: cloudcart-token-exchange
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cloudcart-mcp
+  backend:
+    entTokenExchange:
+      solo:
+        backendRef:
+          group: ""
+          kind: Service
+          name: enterprise-agentgateway
+          namespace: agentgateway-system
+          port: 7777

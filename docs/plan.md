@@ -503,6 +503,49 @@ A useful accident: denied at 44 days, the agent *volunteers* store credit as an 
 That is a natural run-up to the 10:30 beat — it reaches for `issueCredit` on its own, and the
 gateway refuses.
 
+## Spike results (2026-08-18)
+
+All three spikes from the developer-flow plan resolved, two of them better than assumed.
+
+**Catalog over MCP — works.** The registry's MCP bridge on port `31313` accepts a plain bearer
+token (the client-credentials token from `get-token.sh`), so an IDE needs no interactive OAuth.
+It exposes ten catalog tools — `list_agents`, `list_servers`, `list_skills`, `list_deployments`,
+the matching `get_*`, plus health and version — each returning a `v1alpha1` envelope.
+`demo/mcp-config.sh` generates Claude Code and VS Code config.
+
+**Browser login at the gateway — supported.** ext-auth (0.84.0) parsed a full
+`oauth2.oidcAuthorizationCode` AuthConfig and rejected it only for a missing client secret. So
+the gateway can run the login and **support-ui needs no auth code**. `keycloak-setup.sh` now
+creates a fourth client, `cloudcart-gateway`, for the authorization-code flow.
+
+**Token exchange — already running; nothing to deploy.** The plan assumed an STS had to be
+stood up from `STS_BIN_URL`. That binary turns out to be the enterprise-gateway controller
+v2.3.2, which the registry downloads when provisioning a *managed gateway in AWS* — consistent
+with `GatewaySpec` being AWS-only, and not what the in-cluster path uses. The real STS is
+already listening on **port 7777 of the `enterprise-agentgateway` service**:
+
+```
+grant_types_supported: ["urn:ietf:params:oauth:grant-type:token-exchange"]
+token_endpoint:        …:7777/oauth2/token
+jwks_uri:              …:7777/.well-known/jwks.json
+token_expiration:      14400
+```
+
+A real exchange was performed against it. Given a Keycloak token as `subject_token` it returns a
+JWT that **preserves `sub` and `client_id`** while re-issuing under the gateway's own issuer:
+
+| | issuer | sub | other |
+|---|---|---|---|
+| subject (Keycloak) | `…/realms/solo` | `3549ec9e…` | `Groups: [admins]` |
+| exchanged (STS) | `enterprise-agentgateway…:7777` | `3549ec9e…` | `scope: "profile email"` |
+
+**The exchanged token does not carry `Groups`.** Identity survives the exchange; group
+membership does not. A beat built on "two users get different answers" therefore needs the
+original claims propagated as well (`OBO_CLAIMS_TO_PROPAGATE`), not the exchanged token alone.
+
+`k8s/agentgateway/token-exchange.yaml` holds the policy, validated by server-side dry run. Its
+`targetRefs` points at the MCP route until the A2A route exists.
+
 ## Phase 5 — Authorization
 
 **The published policy was not enforced, and could not be.** Asked to issue store credit —
