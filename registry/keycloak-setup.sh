@@ -18,10 +18,12 @@ set -euo pipefail
 #     platform-approvers   the approver persona -- owns policy and the approval gate
 #     admins               already exists; used by the automation client
 #
-#   Clients (all confidential, service accounts on, browser flows off)
+#   Clients (all confidential; the first three are service accounts with browser flows
+#   off, the last runs the authorization-code flow instead)
 #     agentregistry-kagent   agentregistry -> kagent control plane
 #     cloudcart-automation   publish.sh and CI -> agentregistry API
 #     cloudcart-support-ui   the chat frontend -> agentregistry A2A proxy
+#     cloudcart-gateway      agentgateway's browser OIDC login (authorization-code flow)
 #
 # Every client gets an explicit Groups mapper. Without one, Keycloak omits group membership
 # from client_credentials tokens -- and kagent's roleMapper treats a *missing* Groups claim as
@@ -205,9 +207,83 @@ JSON
   } >> "${ENV_FILE}.tmp"
 }
 
+make_login_client() { # clientId envprefix redirectUris...
+  local cid="$1" prefix="$2"; shift 2
+  local redirects="" r
+  for r in "$@"; do
+    redirects="${redirects:+${redirects},}\"${r}\""
+  done
+
+  local uuid
+  uuid="$(api GET "/clients?clientId=${cid}" | first_id)"
+
+  # Unlike the service accounts above this one runs the authorization-code flow: the gateway
+  # redirects the browser to Keycloak and exchanges the code, so support-ui needs no login code.
+  local body
+  body="$(cat <<JSON
+{
+  "clientId": "${cid}",
+  "protocol": "openid-connect",
+  "publicClient": false,
+  "serviceAccountsEnabled": false,
+  "standardFlowEnabled": true,
+  "implicitFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "redirectUris": [${redirects}],
+  "webOrigins": ["+"],
+  "description": "cloud-cart-support gateway OIDC login"
+}
+JSON
+)"
+
+  if [ -z "$uuid" ]; then
+    api POST "/clients" "$body" >/dev/null
+    uuid="$(api GET "/clients?clientId=${cid}" | first_id)"
+    echo "==> Client ${cid}: created (authorization-code flow)"
+  else
+    api PUT "/clients/${uuid}" "$body" >/dev/null
+    echo "==> Client ${cid}: updated (authorization-code flow)"
+  fi
+
+  # Same Groups mapper as the service accounts: the gateway's authorization rules match on it.
+  local has_mapper
+  has_mapper="$(api GET "/clients/${uuid}/protocol-mappers/models" \
+    | python3 -c 'import json,sys; print(any(m.get("name")=="groups" for m in json.load(sys.stdin)))')"
+  if [ "$has_mapper" != "True" ]; then
+    api POST "/clients/${uuid}/protocol-mappers/models" "$(cat <<'JSON'
+{
+  "name": "groups",
+  "protocol": "openid-connect",
+  "protocolMapper": "oidc-group-membership-mapper",
+  "config": {
+    "claim.name": "Groups",
+    "full.path": "false",
+    "access.token.claim": "true",
+    "id.token.claim": "true",
+    "userinfo.token.claim": "true"
+  }
+}
+JSON
+)" >/dev/null
+    echo "    added Groups mapper"
+  fi
+
+  local secret
+  secret="$(api POST "/clients/${uuid}/client-secret" "{}" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
+  {
+    echo "${prefix}_CLIENT_ID=${cid}"
+    echo "${prefix}_CLIENT_SECRET=${secret}"
+  } >> "${ENV_FILE}.tmp"
+}
+
 make_client agentregistry-kagent admins  KAGENT_OIDC
 make_client cloudcart-automation admins  AUTOMATION
 make_client cloudcart-support-ui admins  SUPPORT_UI
+
+# The gateway's browser login. GATEWAY_REDIRECT_URIS defaults to a wildcard so the demo works
+# before the gateway address is known; narrow it once the UI route has a stable hostname.
+make_login_client cloudcart-gateway GATEWAY ${GATEWAY_REDIRECT_URIS:-"*"}
 
 {
   echo "KEYCLOAK_URL=${KEYCLOAK_URL}"
