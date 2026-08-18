@@ -5,20 +5,32 @@ spring:
   thymeleaf:
     cache: false
 
-# Where agents live. This service does not know what agents exist, what models they use,
-# or what tools they may call -- it asks the catalog and the gateway decides the rest.
+# ---------------------------------------------------------------------------------------
+# TODO: point this app at an agent.
+#
+# Nothing here is known yet. The catalog is the source of truth for what exists, so these
+# values are read out of agentregistry rather than invented:
+#
+#   base-url         where the registry lives
+#   default-runtime  which runtime the agent is deployed to  (Runtimes view)
+#   concierge-agent  which agent this app should talk to     (Catalog -> Agents)
+#
+# Find them in the registry UI, or ask the catalog from your editor:
+#   ./demo/mcp-config.sh   then: "what agents are published in the registry?"
+#
+# The credentials come from .env.local via k8s/create-support-ui-secret.sh; this app mints
+# its own short-lived tokens and holds no API keys.
+# ---------------------------------------------------------------------------------------
 agentregistry:
-  base-url: ${AGENTREGISTRY_URL:http://localhost:12121}
-  default-runtime: ${AGENTREGISTRY_RUNTIME:kagent}
-  concierge-agent: ${CONCIERGE_AGENT:support-concierge}
+  base-url: ${AGENTREGISTRY_URL:}
+  default-runtime: ${AGENTREGISTRY_RUNTIME:}
+  concierge-agent: ${CONCIERGE_AGENT:}
   auth-token: ${AGENTREGISTRY_TOKEN:}
-  # Preferred over a static token: registry tokens are short-lived, so the frontend mints
-  # its own with the client-credentials grant and refreshes before expiry.
   oidc:
     issuer: ${OIDC_ISSUER:}
     client-id: ${OIDC_CLIENT_ID:}
     client-secret: ${OIDC_CLIENT_SECRET:}
-  timeout-seconds: ${AGENTREGISTRY_TIMEOUT_SECONDS:60}
+  timeout-seconds: ${AGENTREGISTRY_TIMEOUT_SECONDS:180}
 
 management:
   endpoints:
