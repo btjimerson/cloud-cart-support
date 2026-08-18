@@ -1,0 +1,29 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: logistics-agent
+  tag: v1
+  labels:
+    owner: warehouse
+spec:
+  title: Logistics Agent
+  description: Handles stock availability, warehouse allocation and delivery estimates.
+  modelProvider: openai
+  modelName: gpt-4.1
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: logistics-agent
+    tag: v1
+  skills:
+    - kind: Skill
+      name: warehouse-slotting
+      tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-inventory
+      tag: v1
+  # Catalog-only, as above.
+  source:
+    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:61a24cc

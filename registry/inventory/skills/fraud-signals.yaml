@@ -1,0 +1,15 @@
+apiVersion: ar.dev/v1alpha1
+kind: Skill
+metadata:
+  name: fraud-signals
+  tag: v1
+  labels:
+    owner: risk
+spec:
+  title: Fraud Signals
+  description: Indicators that a refund or return request warrants manual review.
+  source:
+    repository:
+      url: https://github.com/btjimerson/cloud-cart-support
+      branch: main
+      subfolder: registry/inventory/skills/fraud-signals

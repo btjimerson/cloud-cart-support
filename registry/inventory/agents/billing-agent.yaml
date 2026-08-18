@@ -1,0 +1,30 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: billing-agent
+  tag: v1
+  labels:
+    owner: billing
+spec:
+  title: Billing Agent
+  description: Handles invoices, payment methods and refund status. Owned by the Billing team.
+  modelProvider: openai
+  modelName: gpt-4.1
+  compatibleHarnesses:
+    - type: openclaw
+  instructions:
+    kind: Prompt
+    name: billing-agent
+    tag: v1
+  skills:
+    - kind: Skill
+      name: fraud-signals
+      tag: v1
+  mcpServers:
+    - kind: MCPServer
+      name: cloudcart-payments
+      tag: v1
+  # Catalog-only: this agent is published and versioned but never deployed by this demo. It
+  # shares the harness because that is what another team would realistically also use.
+  source:
+    image: ghcr.io/btjimerson/cloud-cart-support/agent-harness:61a24cc

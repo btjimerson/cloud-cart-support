@@ -14,6 +14,9 @@ set -euo pipefail
 #   ./publish.sh --delete        # remove everything this script publishes
 #   ./publish.sh --skip runtimes # publish the catalog before the runtime credential exists
 #
+# Each wave also publishes registry/inventory/<wave> when present: artifacts owned by other
+# teams that make the catalog worth browsing. They are never deployed.
+#
 # Requires AGENTREGISTRY_URL and AGENTREGISTRY_TOKEN.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -94,6 +97,8 @@ if [ "$MODE" = "delete" ]; then
     w="${WAVES[$i]}"
     case " ${SKIP} " in *" ${w} "*) echo "  wave: ${w} (skipped)"; continue ;; esac
     echo "  wave: ${w}"
+    # Inventory first: it is the outer layer, and nothing of ours depends on it.
+    send DELETE "inventory/${w}" || true
     send DELETE "${w}" || true   # keep going: partial state should still drain
   done
   echo "==> Registry teardown complete."
@@ -103,6 +108,9 @@ else
     case " ${SKIP} " in *" ${w} "*) echo "  wave: ${w} (skipped)"; continue ;; esac
     echo "  wave: ${w}"
     send POST "$w"
+    # The wider estate other teams own. Catalog-only -- published so the inventory is worth
+    # browsing, never deployed, so an unreachable decoy cannot break anything.
+    send POST "inventory/${w}"
   done
   echo ""
   if [ -n "$QUERY" ]; then

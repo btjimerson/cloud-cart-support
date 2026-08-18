@@ -1,0 +1,15 @@
+apiVersion: ar.dev/v1alpha1
+kind: Skill
+metadata:
+  name: warehouse-slotting
+  tag: v1
+  labels:
+    owner: warehouse
+spec:
+  title: Warehouse Slotting
+  description: How stock is allocated across warehouses and what that means for delivery dates.
+  source:
+    repository:
+      url: https://github.com/btjimerson/cloud-cart-support
+      branch: main
+      subfolder: registry/inventory/skills/warehouse-slotting

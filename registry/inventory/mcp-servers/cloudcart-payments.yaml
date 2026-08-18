@@ -1,0 +1,16 @@
+apiVersion: ar.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: cloudcart-payments
+  tag: v1
+  labels:
+    owner: payments
+    domain: payments
+spec:
+  title: Cloud Cart Payments
+  description: >-
+    Charges, refunds and chargebacks. Owned by the Payments team and deliberately not wired
+    into support: refunds go through the returns flow, which the gateway governs.
+  remote:
+    type: streamable-http
+    url: http://payments-service.payments.svc:8080/mcp

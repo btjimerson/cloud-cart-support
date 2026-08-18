@@ -195,11 +195,15 @@ JSON
     echo "    service account -> group ${grp}"
   fi
 
+  # Read the current secret rather than regenerating: POST /client-secret rotates it, which
+  # would invalidate every credential already deployed from an earlier run.
   local secret
-  secret="$(api POST "/clients/${uuid}/client-secret" "{}" \
+  secret="$(api GET "/clients/${uuid}/client-secret" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
-  [ -n "$secret" ] || secret="$(api GET "/clients/${uuid}/client-secret" \
-    | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
+  if [ -z "$secret" ]; then
+    secret="$(api POST "/clients/${uuid}/client-secret" "{}" \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
+  fi
 
   {
     echo "${prefix}_CLIENT_ID=${cid}"
@@ -268,9 +272,14 @@ JSON
     echo "    added Groups mapper"
   fi
 
+  # Same rule as above: read, do not rotate.
   local secret
-  secret="$(api POST "/clients/${uuid}/client-secret" "{}" \
+  secret="$(api GET "/clients/${uuid}/client-secret" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
+  if [ -z "$secret" ]; then
+    secret="$(api POST "/clients/${uuid}/client-secret" "{}" \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin).get("value",""))')"
+  fi
   {
     echo "${prefix}_CLIENT_ID=${cid}"
     echo "${prefix}_CLIENT_SECRET=${secret}"

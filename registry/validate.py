@@ -155,8 +155,11 @@ def main():
     declared = set()  # (kind, name)
     errors = []
 
-    for wave in WAVES:
-        for f in sorted((here / wave).glob("*.yaml")):
+    # The inventory tree mirrors the waves. It is validated together with the main tree so a
+    # reference from one to the other still resolves.
+    wave_dirs = [here / w for w in WAVES] + [here / "inventory" / w for w in WAVES]
+    for wave in wave_dirs:
+        for f in sorted(wave.glob("*.yaml")):
             try:
                 loaded = list(yaml.safe_load_all(f.read_text()))
             except yaml.YAMLError as e:
