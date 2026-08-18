@@ -43,9 +43,14 @@ public class HealthController {
      */
     @GetMapping("/health")
     public Map<String, Object> health() {
+        // "healthy but not wired" is a real state, and the one an app sits in before anyone
+        // points it at a catalog. Reporting it plainly beats looking healthy and answering
+        // nothing.
+        boolean wired = !registryBaseUrl.isBlank() && !defaultRuntime.isBlank()
+                && !conciergeAgent.isBlank();
         return Map.of(
                 "status", "healthy",
-                "agent_source", "agentregistry",
+                "agent_source", wired ? "agentregistry" : "unconfigured",
                 "registry", registryBaseUrl,
                 "runtime", defaultRuntime,
                 "concierge_agent", conciergeAgent

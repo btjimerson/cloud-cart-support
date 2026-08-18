@@ -145,6 +145,30 @@ class A2AClientTest {
         assertTrue(parse(body).delegates().isEmpty(), "an MCP tool call is not a handoff");
     }
 
+    /**
+     * Before anyone points the app at a catalog it has no agent to call. Reporting that as
+     * "unavailable" would send whoever is wiring it up hunting for a broken agent instead of
+     * for the values they have not set.
+     */
+    @Test
+    void unconfiguredClient_saysSoRatherThanReportingAnOutage() {
+        A2AClient blank = new A2AClient(objectMapper, "", "", "", 30, "", "", "");
+        assertFalse(blank.isConfigured("support-concierge"));
+
+        A2AClient.A2AReply reply = blank.invoke("support-concierge", "hello", "c1");
+        assertTrue(reply.failed());
+        assertTrue(reply.content().contains("not wired"),
+                "should name the wiring gap, got: " + reply.content());
+        assertFalse(reply.content().contains("unavailable"),
+                "an unwired app is not an outage");
+    }
+
+    @Test
+    void configuredClient_reportsItself() {
+        assertTrue(client().isConfigured("support-concierge"));
+        assertFalse(client().isConfigured(""), "a blank agent name is not configured");
+    }
+
     @Test
     void jsonRpcError_isReportedAsFailure() throws Exception {
         String body = """

@@ -169,6 +169,15 @@ public class A2AClient {
      * @return the agent's reply
      */
     public A2AReply invoke(String runtime, String deploymentName, String message, String contextId) {
+        // An app that has not been pointed at a catalog yet should say so. Left to fail on the
+        // HTTP call it would report the agent as "unavailable", which sends whoever is wiring
+        // it up looking for a broken agent rather than for the three values they have not set.
+        if (!isConfigured(runtime, deploymentName)) {
+            log.warn("No agent configured: set agentregistry.base-url, default-runtime and concierge-agent");
+            return A2AReply.error("This app is not wired to an agent yet. Set the registry URL, "
+                    + "runtime and agent name -- the catalog lists what is available.");
+        }
+
         String url = "%s/v0/a2a/sessions/%s/agents/%s".formatted(registryBaseUrl, runtime, deploymentName);
 
         try {
@@ -395,6 +404,28 @@ public class A2AClient {
         } else if (node.isArray()) {
             node.forEach(child -> collectTextParts(child, sink));
         }
+    }
+
+    /**
+     * Whether this instance has been given enough to reach an agent.
+     *
+     * @param runtime        the runtime connection name
+     * @param deploymentName the agent to invoke
+     * @return true when a registry URL, runtime and agent name are all present
+     */
+    public boolean isConfigured(String runtime, String deploymentName) {
+        return !registryBaseUrl.isBlank() && runtime != null && !runtime.isBlank()
+                && deploymentName != null && !deploymentName.isBlank();
+    }
+
+    /**
+     * Whether this instance is configured against its default runtime and agent.
+     *
+     * @param deploymentName the agent to invoke
+     * @return true when the defaults are sufficient to reach that agent
+     */
+    public boolean isConfigured(String deploymentName) {
+        return isConfigured(defaultRuntime, deploymentName);
     }
 
     /**
