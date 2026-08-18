@@ -41,3 +41,7 @@ build/
 
 # Local service-account credentials (registry/keycloak-setup.sh)
 .env.local
+
+# Generated IDE MCP config (contains a short-lived token)
+.mcp.json
+.vscode/mcp.json
