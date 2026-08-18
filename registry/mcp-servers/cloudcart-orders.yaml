@@ -10,5 +10,8 @@ spec:
   title: Cloud Cart Orders
   description: Order status, tracking, cancellation and return initiation. Contains state-changing tools.
   remote:
+    # Through the gateway, not straight to the service: this is what makes tool calls
+    # governable at all. The per-server route keeps this agent's toolset scoped to this
+    # server and its tool names unprefixed.
     type: streamable-http
-    url: http://orders-service.agentic-demo.svc:8080/mcp
+    url: http://agentgateway-proxy.agentgateway-system.svc:8080/cloudcart/mcp/orders

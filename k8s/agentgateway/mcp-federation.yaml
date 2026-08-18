@@ -1,13 +1,28 @@
-# Puts agentgateway in front of the four MCP servers.
+# Puts agentgateway in front of the MCP servers.
 #
-# Why this exists: without it there is no enforcement point. Agents receive MCP URLs from the
-# kagent adapter and connect straight to the services, so the RuntimeAccessPolicy published in
-# the catalog has nothing to enforce it -- a tool the policy withholds is still callable. This
-# backend federates the four servers behind one gateway endpoint so tool calls pass through
-# something that can say no.
+# Without this there is no enforcement point: agents receive MCP URLs from the kagent adapter
+# and connect straight to the services, so a tool policy has nothing to act on.
 #
-# Federation also means agents see one MCP endpoint rather than four, and which server a tool
-# came from stops being the agent's concern.
+# Two shapes are defined, deliberately:
+#
+#   /cloudcart/mcp            all four servers behind one endpoint. This is the federation
+#                             demo -- one address, one session, every tool -- and what a
+#                             developer or IDE would point at to explore the estate.
+#
+#   /cloudcart/mcp/<server>   one route per server, `prefixMode: Never`. This is what the
+#                             agents use. Federating everything to every agent would hand
+#                             returns-agent the notification and catalog tools too, growing
+#                             its toolset from 7 to 19 and inviting the model to reach for
+#                             things it has no business calling. Per-server routes keep the
+#                             scoping the agent artifacts already express, while still putting
+#                             the gateway in the path of every call.
+#
+# Three things the gateway needs from the services, each of which fails differently:
+#   appProtocol: agentgateway.dev/mcp on the port -> otherwise "mcp: no backends configured"
+#   a URLRewrite stripping the route prefix        -> otherwise the backend answers 404
+#   streamable HTTP rather than SSE                -> what the federation backend speaks
+
+---
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
@@ -49,8 +64,6 @@ spec:
             matchLabels:
               app: notifications-service
 ---
-# A dedicated path so this demo does not collide with the /mcp route that belongs to the
-# user's other demo on the same gateway.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -66,8 +79,6 @@ spec:
         - path:
             type: PathPrefix
             value: /cloudcart/mcp
-      # The prefix is rewritten to /mcp because the backends serve MCP there. Without this the
-      # gateway forwards /cloudcart/mcp verbatim and the services answer 404.
       filters:
         - type: URLRewrite
           urlRewrite:
@@ -78,3 +89,187 @@ spec:
         - group: agentgateway.dev
           kind: AgentgatewayBackend
           name: cloudcart-mcp
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: cloudcart-mcp-catalog
+  namespace: agentgateway-system
+spec:
+  mcp:
+    # Tool names stay as the server defines them. With prefixing on they arrive as
+    # `orders-service-8080_getOrderStatus`, which changes every name the agent knows.
+    prefixMode: Never
+    targets:
+      - name: cloudcart-catalog
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: catalog-service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cloudcart-mcp-catalog
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agentgateway-proxy
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cloudcart/mcp/catalog
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: cloudcart-mcp-catalog
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: cloudcart-mcp-orders
+  namespace: agentgateway-system
+spec:
+  mcp:
+    # Tool names stay as the server defines them. With prefixing on they arrive as
+    # `orders-service-8080_getOrderStatus`, which changes every name the agent knows.
+    prefixMode: Never
+    targets:
+      - name: cloudcart-orders
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: orders-service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cloudcart-mcp-orders
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agentgateway-proxy
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cloudcart/mcp/orders
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: cloudcart-mcp-orders
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: cloudcart-mcp-customers
+  namespace: agentgateway-system
+spec:
+  mcp:
+    # Tool names stay as the server defines them. With prefixing on they arrive as
+    # `orders-service-8080_getOrderStatus`, which changes every name the agent knows.
+    prefixMode: Never
+    targets:
+      - name: cloudcart-customers
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: customers-service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cloudcart-mcp-customers
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agentgateway-proxy
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cloudcart/mcp/customers
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: cloudcart-mcp-customers
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: cloudcart-mcp-notifications
+  namespace: agentgateway-system
+spec:
+  mcp:
+    # Tool names stay as the server defines them. With prefixing on they arrive as
+    # `orders-service-8080_getOrderStatus`, which changes every name the agent knows.
+    prefixMode: Never
+    targets:
+      - name: cloudcart-notifications
+        selector:
+          namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: agentic-demo
+          services:
+            matchLabels:
+              app: notifications-service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cloudcart-mcp-notifications
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agentgateway-proxy
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cloudcart/mcp/notifications
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: cloudcart-mcp-notifications

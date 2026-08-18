@@ -10,5 +10,8 @@ spec:
   title: Cloud Cart Notifications
   description: Outbound email and SMS, support tickets and supervisor escalation. Contains outbound-messaging tools.
   remote:
+    # Through the gateway, not straight to the service: this is what makes tool calls
+    # governable at all. The per-server route keeps this agent's toolset scoped to this
+    # server and its tool names unprefixed.
     type: streamable-http
-    url: http://notifications-service.agentic-demo.svc:8080/mcp
+    url: http://agentgateway-proxy.agentgateway-system.svc:8080/cloudcart/mcp/notifications

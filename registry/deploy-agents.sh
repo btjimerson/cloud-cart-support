@@ -12,6 +12,11 @@ set -euo pipefail
 #   ./deploy-agents.sh returns-agent          # just one
 #   RUNTIME=aws-bedrock ./deploy-agents.sh product-agent
 #   ./deploy-agents.sh --delete               # tear down
+#   ./deploy-agents.sh --recreate             # delete, wait for GC, create again
+#
+# Use --recreate after a credential or MCP URL change. The registry does not diff a
+# Deployment's env: re-applying reports "unchanged" and the pod keeps the old values, which
+# surfaces later as a harness crash-looping on a 401 with nothing to say why.
 #
 # Requires AGENTREGISTRY_URL and AGENTREGISTRY_TOKEN, plus .env.local for the harness's
 # OIDC credentials.
@@ -40,10 +45,12 @@ OTEL_ENDPOINT="${OTEL_ENDPOINT:-http://agentregistry-enterprise-telemetry-collec
 ALL_AGENTS=(returns-agent order-agent complaint-agent product-agent support-concierge)
 
 DELETE=false
+RECREATE=false
 AGENTS=()
 for arg in "$@"; do
   case "$arg" in
     --delete) DELETE=true ;;
+    --recreate) RECREATE=true ;;
     -*) echo "unknown option: $arg" >&2; exit 2 ;;
     *) AGENTS+=("$arg") ;;
   esac
@@ -62,11 +69,27 @@ api() { # method, path, [body-file]
   fi
 }
 
-if [ "$DELETE" = true ]; then
+if [ "$DELETE" = true ] || [ "$RECREATE" = true ]; then
   for a in "${AGENTS[@]}"; do
     printf '  delete %-20s -> %s\n' "$a" "$(api DELETE "/v0/deployments/${a}")"
   done
-  exit 0
+  [ "$RECREATE" = true ] || exit 0
+
+  # Deletion is asynchronous. Re-applying too early is refused with "object is terminating;
+  # delete + re-apply once GC purges the row".
+  #
+  # The registry's deployment list is not a reliable signal here: it hides a soft-deleted row
+  # while the row still blocks re-apply. The agent CRs disappearing is the real one, because
+  # the registry only finishes removing a deployment once it has deleted them.
+  echo "  waiting for the registry to finish removing the agents..."
+  for _ in $(seq 1 60); do
+    left="$(kubectl get agents.kagent.dev -n "${KAGENT_NAMESPACE:-kagent}" \
+      --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+    [ "$left" = "0" ] && break
+    sleep 5
+  done
+  [ "${left:-0}" = "0" ] || echo "  warning: ${left} agent CR(s) still present; re-apply may be refused" >&2
+  echo "  removed"
 fi
 
 for a in "${AGENTS[@]}"; do

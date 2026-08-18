@@ -28,10 +28,10 @@ export AGENTREGISTRY_TOKEN="${AGENTREGISTRY_TOKEN:-$(./registry/get-token.sh)}"
 # Keycloak client secrets and the in-cluster Secret drift apart easily -- re-running
 # keycloak-setup.sh used to rotate them, and the frontend then 401s with only "the agent is
 # unavailable" to show for it. Re-syncing here makes that class of failure impossible.
-echo "==> Re-syncing the frontend's registry credentials..."
-./k8s/create-support-ui-secret.sh >/dev/null
+echo "==> Re-syncing credentials everywhere they are cached..."
+./k8s/sync-credentials.sh >/dev/null
 kubectl rollout restart deployment/support-ui -n "${NAMESPACE}" >/dev/null
-echo "    support-ui-oidc in sync with .env.local"
+echo "    frontend, registry and kagent credential in sync with .env.local"
 
 echo "==> Resetting seeded data..."
 # Only orders carries mutable demo state; the other three are read-mostly, but restarting
@@ -65,10 +65,13 @@ echo "==> Republishing the catalog..."
 ./registry/publish.sh 2>&1 | grep -E '^  wave|created|configured|failed' | sed 's/^/  /' || true
 
 echo "==> Redeploying agents..."
-./registry/deploy-agents.sh 2>&1 | sed 's/^/  /'
+# --recreate, not a plain apply: the registry does not diff Deployment env, so a changed
+# credential or MCP URL would otherwise be reported "unchanged" and never reach the pod.
+./registry/deploy-agents.sh --recreate 2>&1 | sed 's/^/  /'
 
 echo "==> Waiting for agents to become ready..."
-until [ "$(kubectl get agents.kagent.dev -n kagent --no-headers 2>/dev/null | grep -c 'True.*True')" = "5" ]; do
+for _ in $(seq 1 72); do
+  [ "$(kubectl get agents.kagent.dev -n kagent --no-headers 2>/dev/null | grep -c 'True.*True')" = "5" ] && break
   sleep 5
 done
 kubectl get agents.kagent.dev -n kagent --no-headers | awk '{print "    "$1" "$4}'
